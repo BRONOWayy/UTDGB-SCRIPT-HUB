@@ -8,7 +8,7 @@ if CoreGui:FindFirstChild("NebulaX_Elite_Final") then CoreGui.NebulaX_Elite_Fina
 
 local NebulaX = Instance.new("ScreenGui", CoreGui)
 NebulaX.Name = "NebulaX_Elite_Final"
-NebulaX.DisplayOrder = 10 -- Keep it above other UIs
+NebulaX.DisplayOrder = 999 -- Forced to front
 
 -- [[ THEME CONFIG ]]
 local bg_color = Color3.fromRGB(20, 10, 40) 
@@ -37,17 +37,17 @@ Sidebar.BackgroundColor3 = sidebar_color
 Sidebar.BorderSizePixel = 0
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
 
--- HEADER: Fixed Text Scaling for Emoji
+-- HEADER: Renamed to NEB X + Emoji
 local Title = Instance.new("TextLabel", Sidebar)
 Title.Size = UDim2.new(1, 0, 0, 70)
-Title.Text = "NebulaX 🌌" 
+Title.Text = "NEB X 🌌" 
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
+Title.TextSize = 24 -- Increased size
 Title.TextColor3 = accent_purple
 Title.BackgroundTransparency = 1
 Title.TextXAlignment = Enum.TextXAlignment.Center
 
--- [[ PAGES ]]
+-- [[ PAGES CONTAINER ]]
 local Container = Instance.new("Frame", Main)
 Container.Size = UDim2.new(1, -170, 1, -60)
 Container.Position = UDim2.new(0, 160, 0, 40)
@@ -93,7 +93,7 @@ local Widget = Instance.new("ImageButton", NebulaX)
 Widget.Size = UDim2.new(0, 50, 0, 50) 
 Widget.Position = UDim2.new(0, 10, 0.5, -25)
 Widget.BackgroundColor3 = bg_color
-Widget.Image = "http://www.roblox.com/asset/?id=13835032549" -- Updated Image Link
+Widget.Image = "rbxassetid://13835032549" 
 Widget.Visible = false
 Widget.Draggable = true
 Instance.new("UICorner", Widget).CornerRadius = UDim.new(0, 8)
@@ -120,13 +120,13 @@ Min.BackgroundTransparency = 1
 Min.Font = Enum.Font.GothamBold
 Min.TextSize = 22
 
--- [[ ARE YOU SURE MENU (FIXED VISIBILITY) ]]
+-- [[ ARE YOU SURE MENU ]]
 local ConfirmMenu = Instance.new("Frame", NebulaX)
 ConfirmMenu.Size = UDim2.new(0, 220, 0, 110)
 ConfirmMenu.Position = UDim2.new(0.5, -110, 0.5, -55)
 ConfirmMenu.BackgroundColor3 = sidebar_color
 ConfirmMenu.Visible = false
-ConfirmMenu.ZIndex = 100 -- Ensure it is on top
+ConfirmMenu.ZIndex = 10 -- Layering fix
 Instance.new("UICorner", ConfirmMenu)
 local ConfirmStroke = Instance.new("UIStroke", ConfirmMenu)
 ConfirmStroke.Color = Color3.fromRGB(255, 50, 50)
@@ -139,7 +139,7 @@ ConfirmLabel.TextColor3 = text_color
 ConfirmLabel.Font = Enum.Font.GothamBold
 ConfirmLabel.TextSize = 16
 ConfirmLabel.BackgroundTransparency = 1
-ConfirmLabel.ZIndex = 101
+ConfirmLabel.ZIndex = 11
 
 local Yes = Instance.new("TextButton", ConfirmMenu)
 Yes.Size = UDim2.new(0.4, 0, 0, 30)
@@ -147,7 +147,7 @@ Yes.Position = UDim2.new(0.07, 0, 0.6, 0)
 Yes.Text = "Kill UI"
 Yes.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 Yes.TextColor3 = text_color
-Yes.ZIndex = 101
+Yes.ZIndex = 11
 Instance.new("UICorner", Yes)
 
 local No = Instance.new("TextButton", ConfirmMenu)
@@ -156,7 +156,7 @@ No.Position = UDim2.new(0.53, 0, 0.6, 0)
 No.Text = "Cancel"
 No.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 No.TextColor3 = text_color
-No.ZIndex = 101
+No.ZIndex = 11
 Instance.new("UICorner", No)
 
 -- [[ LOGIC ]]
