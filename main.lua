@@ -3,166 +3,144 @@ local lp = P.LocalPlayer
 local TS = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
--- Cleanup
-if CoreGui:FindFirstChild("NebulaX_Elite") then CoreGui.NebulaX_Elite:Destroy() end
+-- Cleanup existing UI to prevent overlapping
+if CoreGui:FindFirstChild("NebulaX_Purple") then CoreGui.NebulaX_Purple:Destroy() end
 
 local NebulaX = Instance.new("ScreenGui", CoreGui)
-NebulaX.Name = "NebulaX_Elite"
+NebulaX.Name = "NebulaX_Purple"
 
--- [[ THEME COLOR PALETTE ]]
-local bg_main = Color3.fromRGB(15, 15, 20)
-local bg_secondary = Color3.fromRGB(22, 22, 30)
-local accent = Color3.fromRGB(0, 170, 255) -- Deep Sky Blue
-local text_main = Color3.fromRGB(255, 255, 255)
-local text_dim = Color3.fromRGB(180, 180, 180)
-
--- [[ HELPER: SMOOTH HOVER ]]
-local function AddHover(btn, normal, hover)
-	btn.MouseEnter:Connect(function()
-		TS:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = hover}):Play()
-	end)
-	btn.MouseLeave:Connect(function()
-		TS:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = normal}):Play()
-	end)
-end
+-- [[ THEME CONFIG ]]
+local bg_color = Color3.fromRGB(25, 10, 50) -- Deep Purple Background
+local sidebar_color = Color3.fromRGB(15, 5, 30) -- Darker Purple Sidebar
+local accent_purple = Color3.fromRGB(160, 80, 255) -- Bright Purple Accent
+local text_color = Color3.fromRGB(255, 255, 255)
 
 -- [[ MAIN HUB ]]
 local Main = Instance.new("Frame", NebulaX)
 Main.Size = UDim2.new(0, 480, 0, 320)
 Main.Position = UDim2.new(0.5, -240, 0.5, -160)
-Main.BackgroundColor3 = bg_main
+Main.BackgroundColor3 = bg_color
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.Draggable = true
 
-local Corner = Instance.new("UICorner", Main)
-Corner.CornerRadius = UDim.new(0, 12)
+local MainCorner = Instance.new("UICorner", Main)
+MainCorner.CornerRadius = UDim.new(0, 15)
 
--- Blue Glow Border (Solid)
-local Border = Instance.new("UIStroke", Main)
-Border.Thickness = 2
-Border.Color = accent
-Border.Transparency = 0.4
+-- Solid Purple Border
+local MainStroke = Instance.new("UIStroke", Main)
+MainStroke.Thickness = 3
+MainStroke.Color = accent_purple
+MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 -- [[ SIDEBAR ]]
 local Sidebar = Instance.new("Frame", Main)
 Sidebar.Size = UDim2.new(0, 140, 1, 0)
-Sidebar.BackgroundColor3 = bg_secondary
+Sidebar.BackgroundColor3 = sidebar_color
 Sidebar.BorderSizePixel = 0
-Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 15)
 
 local Title = Instance.new("TextLabel", Sidebar)
 Title.Size = UDim2.new(1, 0, 0, 60)
-Title.Text = "NEBULAX"
+Title.Text = "NebulaX 🌌" -- Added Galaxy Emoji
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-Title.TextColor3 = accent
+Title.TextSize = 22
+Title.TextColor3 = accent_purple
 Title.BackgroundTransparency = 1
 
--- [[ NAVIGATION SYSTEM ]]
+-- [[ PAGES CONTAINER ]]
 local Container = Instance.new("Frame", Main)
-Container.Size = UDim2.new(1, -160, 1, -40)
-Container.Position = UDim2.new(0, 150, 0, 20)
+Container.Size = UDim2.new(1, -160, 1, -50)
+Container.Position = UDim2.new(0, 150, 0, 30)
 Container.BackgroundTransparency = 1
 
 local Pages = {}
 local function CreateTab(name, order)
-	local Page = Instance.new("ScrollingFrame", Container)
-	Page.Size = UDim2.new(1, 0, 1, 0)
-	Page.Visible = (order == 1)
-	Page.BackgroundTransparency = 1
-	Page.ScrollBarThickness = 2
-	Page.ScrollBarImageColor3 = accent
-	local Layout = Instance.new("UIListLayout", Page)
-	Layout.Padding = UDim.new(0, 8)
-	Pages[name] = Page
+    local Page = Instance.new("ScrollingFrame", Container)
+    Page.Size = UDim2.new(1, 0, 1, 0)
+    Page.Visible = (order == 1)
+    Page.BackgroundTransparency = 1
+    Page.ScrollBarThickness = 2
+    Page.ScrollBarImageColor3 = accent_purple
+    Instance.new("UIListLayout", Page).Padding = UDim.new(0, 10)
+    Pages[name] = Page
 
-	local TabBtn = Instance.new("TextButton", Sidebar)
-	TabBtn.Size = UDim2.new(0.85, 0, 0, 35)
-	TabBtn.Position = UDim2.new(0.075, 0, 0, 70 + (order-1)*42)
-	TabBtn.Text = name
-	TabBtn.Font = Enum.Font.GothamSemibold
-	TabBtn.TextSize = 14
-	TabBtn.TextColor3 = (order == 1) and text_main or text_dim
-	TabBtn.BackgroundColor3 = (order == 1) and accent or Color3.fromRGB(30, 30, 40)
-	Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+    local TabBtn = Instance.new("TextButton", Sidebar)
+    TabBtn.Size = UDim2.new(0.85, 0, 0, 35)
+    TabBtn.Position = UDim2.new(0.075, 0, 0, 70 + (order-1)*42)
+    TabBtn.Text = name
+    TabBtn.Font = Enum.Font.GothamMedium
+    TabBtn.TextSize = 14
+    TabBtn.TextColor3 = text_color
+    TabBtn.BackgroundColor3 = (order == 1) and accent_purple or Color3.fromRGB(40, 20, 70)
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 8)
 
-	TabBtn.MouseButton1Click:Connect(function()
-		for _, p in pairs(Pages) do p.Visible = false end
-		for _, b in pairs(Sidebar:GetChildren()) do
-			if b:IsA("TextButton") then
-				TS:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(30, 30, 40), TextColor3 = text_dim}):Play()
-			end
-		end
-		Page.Visible = true
-		TS:Create(TabBtn, TweenInfo.new(0.2), {BackgroundColor3 = accent, TextColor3 = text_main}):Play()
-	end)
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, p in pairs(Pages) do p.Visible = false end
+        for _, b in pairs(Sidebar:GetChildren()) do
+            if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(40, 20, 70) end
+        end
+        Page.Visible = true
+        TabBtn.BackgroundColor3 = accent_purple
+    end)
 end
 
-local tabs = {"Home", "Combat", "Farming", "Visuals", "Settings"}
-for i, v in ipairs(tabs) do CreateTab(v, i) end
+local tabs = {"Home", "Items/Farming", "Auto Get", "Performance", "Settings", "Updates"}
+for i, name in ipairs(tabs) do CreateTab(name, i) end
 
--- [[ COMPONENT: BUTTON ]]
-local function CreateButton(parent, text, callback)
-	local b = Instance.new("TextButton", parent)
-	b.Size = UDim2.new(1, -10, 0, 40)
-	b.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-	b.Text = text
-	b.Font = Enum.Font.GothamMedium
-	b.TextColor3 = text_main
-	b.TextSize = 14
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-	local s = Instance.new("UIStroke", b)
-	s.Thickness = 1
-	s.Color = accent
-	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	
-	b.MouseButton1Click:Connect(callback)
-	AddHover(b, Color3.fromRGB(35, 35, 45), Color3.fromRGB(45, 45, 55))
-end
+-- [[ GALACTIC GLUE ]]
+local GlueBtn = Instance.new("TextButton", Pages["Items/Farming"])
+GlueBtn.Size = UDim2.new(1, -10, 0, 45)
+GlueBtn.Text = "[ GALACTIC GLUE ]"
+GlueBtn.Font = Enum.Font.GothamBold
+GlueBtn.TextSize = 16
+GlueBtn.TextColor3 = text_color
+GlueBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 100)
+Instance.new("UICorner", GlueBtn).CornerRadius = UDim.new(0, 10)
 
--- Example usage in Farming Tab
-CreateButton(Pages["Farming"], "[ GALACTIC GLUE ]", function()
-	print("Galactic Glue Activated")
-end)
+local GlueStroke = Instance.new("UIStroke", GlueBtn)
+GlueStroke.Thickness = 2
+GlueStroke.Color = accent_purple
 
--- [[ WIDGET / MINIMIZE ]]
+-- [[ NINJA WIDGET ]]
 local Widget = Instance.new("ImageButton", NebulaX)
-Widget.Size = UDim2.new(0, 55, 0, 55)
-Widget.Position = UDim2.new(0, 20, 0.5, -27)
-Widget.BackgroundColor3 = bg_main
+Widget.Size = UDim2.new(0, 60, 0, 60)
+Widget.Position = UDim2.new(0.02, 0, 0.4, 0)
+Widget.BackgroundColor3 = bg_color
 Widget.Image = "rbxassetid://13835032549" -- Ninja Icon
 Widget.Visible = false
 Widget.Draggable = true
-Instance.new("UICorner", Widget).CornerRadius = UDim.new(0, 10)
-local ws = Instance.new("UIStroke", Widget)
-ws.Thickness = 2
-ws.Color = accent
+Instance.new("UICorner", Widget).CornerRadius = UDim.new(0, 12)
+local WidgetStroke = Instance.new("UIStroke", Widget)
+WidgetStroke.Thickness = 2
+WidgetStroke.Color = accent_purple
 
--- [[ WINDOW CONTROLS ]]
-local CloseBtn = Instance.new("TextButton", Main)
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.Text = "×"
-CloseBtn.TextSize = 24
-CloseBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-CloseBtn.BackgroundTransparency = 1
+-- [[ TOP CONTROLS ]]
+local Close = Instance.new("TextButton", Main)
+Close.Size = UDim2.new(0, 30, 0, 30)
+Close.Position = UDim2.new(1, -35, 0, 5)
+Close.Text = "X"
+Close.TextColor3 = Color3.fromRGB(255, 80, 80)
+Close.BackgroundTransparency = 1
+Close.TextSize = 20
 
-local MinBtn = Instance.new("TextButton", Main)
-MinBtn.Size = UDim2.new(0, 30, 0, 30)
-MinBtn.Position = UDim2.new(1, -65, 0, 5)
-MinBtn.Text = "-"
-MinBtn.TextSize = 24
-MinBtn.TextColor3 = text_main
-MinBtn.BackgroundTransparency = 1
+local Min = Instance.new("TextButton", Main)
+Min.Size = UDim2.new(0, 30, 0, 30)
+Min.Position = UDim2.new(1, -65, 0, 5)
+Min.Text = "-"
+Min.TextColor3 = text_color
+Min.BackgroundTransparency = 1
+Min.TextSize = 25
 
--- Logic
-CloseBtn.MouseButton1Click:Connect(function() NebulaX:Destroy() end)
-MinBtn.MouseButton1Click:Connect(function()
-	Main.Visible = false
-	Widget.Visible = true
+-- [[ LOGIC ]]
+Close.MouseButton1Click:Connect(function() NebulaX:Destroy() end)
+
+Min.MouseButton1Click:Connect(function()
+    Main.Visible = false
+    Widget.Visible = true
 end)
+
 Widget.MouseButton1Click:Connect(function()
-	Main.Visible = true
-	Widget.Visible = false
+    Main.Visible = true
+    Widget.Visible = false
 end)
