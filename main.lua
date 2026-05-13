@@ -36,14 +36,15 @@ Sidebar.BackgroundColor3 = sidebar_color
 Sidebar.BorderSizePixel = 0
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
 
--- Header with Galaxy Emoji on the Right
+-- HEADER WITH GALAXY EMOJI
 local Title = Instance.new("TextLabel", Sidebar)
 Title.Size = UDim2.new(1, 0, 0, 70)
-Title.Text = "NebulaX 🌌 " -- Galaxy emoji on the right
+Title.Text = "NebulaX 🌌" -- Emoji placed on the right
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 22
 Title.TextColor3 = accent_purple
 Title.BackgroundTransparency = 1
+Title.TextXAlignment = Enum.TextXAlignment.Center
 
 -- [[ PAGES CONTAINER ]]
 local Container = Instance.new("Frame", Main)
@@ -98,15 +99,15 @@ local GlueStroke = Instance.new("UIStroke", GlueBtn)
 GlueStroke.Thickness = 2
 GlueStroke.Color = accent_purple
 
--- [[ NINJA WIDGET (RESIZED SMALLER) ]]
+-- [[ NINJA WIDGET (SMALLER FIX) ]]
 local Widget = Instance.new("ImageButton", NebulaX)
-Widget.Size = UDim2.new(0, 55, 0, 55) -- Fixed size to not be "way to fuckin big"
-Widget.Position = UDim2.new(0, 15, 0.5, -27)
+Widget.Size = UDim2.new(0, 50, 0, 50) -- Adjusted to standard icon size
+Widget.Position = UDim2.new(0, 10, 0.5, -25)
 Widget.BackgroundColor3 = bg_color
 Widget.Image = "rbxassetid://13835032549" 
 Widget.Visible = false
 Widget.Draggable = true
-Instance.new("UICorner", Widget).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", Widget).CornerRadius = UDim.new(0, 8)
 local WidgetStroke = Instance.new("UIStroke", Widget)
 WidgetStroke.Thickness = 2
 WidgetStroke.Color = accent_purple
@@ -134,11 +135,12 @@ Min.TextSize = 22
 local ConfirmMenu = Instance.new("Frame", NebulaX)
 ConfirmMenu.Size = UDim2.new(0, 220, 0, 110)
 ConfirmMenu.Position = UDim2.new(0.5, -110, 0.5, -55)
-ConfirmMenu.BackgroundColor3 = Color3.fromRGB(30, 15, 50)
+ConfirmMenu.BackgroundColor3 = sidebar_color
 ConfirmMenu.Visible = false
+ConfirmMenu.ZIndex = 5
 Instance.new("UICorner", ConfirmMenu)
 local ConfirmStroke = Instance.new("UIStroke", ConfirmMenu)
-ConfirmStroke.Color = accent_purple
+ConfirmStroke.Color = Color3.fromRGB(255, 50, 50)
 ConfirmStroke.Thickness = 2
 
 local ConfirmLabel = Instance.new("TextLabel", ConfirmMenu)
