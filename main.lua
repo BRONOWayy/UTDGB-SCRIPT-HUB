@@ -36,10 +36,11 @@ Sidebar.BackgroundColor3 = sidebar_color
 Sidebar.BorderSizePixel = 0
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
 
--- HEADER WITH GALAXY EMOJI
+-- HEADER: Expanded to fit Galaxy Emoji
 local Title = Instance.new("TextLabel", Sidebar)
-Title.Size = UDim2.new(1, 0, 0, 70)
-Title.Text = "NebulaX 🌌" -- Emoji placed on the right
+Title.Size = UDim2.new(1.2, 0, 0, 70) -- Made wider to ensure emoji isn't cut off
+Title.Position = UDim2.new(-0.1, 0, 0, 0)
+Title.Text = "NebulaX 🌌" 
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 22
 Title.TextColor3 = accent_purple
@@ -86,22 +87,9 @@ end
 local tabs = {"Home", "Items/Farming", "Auto Get", "Performance", "Settings", "Updates"}
 for i, name in ipairs(tabs) do CreateTab(name, i) end
 
--- [[ COMPONENT: GALACTIC GLUE ]]
-local GlueBtn = Instance.new("TextButton", Pages["Items/Farming"])
-GlueBtn.Size = UDim2.new(1, -10, 0, 45)
-GlueBtn.Text = "[ GALACTIC GLUE ]"
-GlueBtn.Font = Enum.Font.GothamBold
-GlueBtn.TextSize = 16
-GlueBtn.TextColor3 = text_color
-GlueBtn.BackgroundColor3 = Color3.fromRGB(70, 35, 110)
-Instance.new("UICorner", GlueBtn).CornerRadius = UDim.new(0, 10)
-local GlueStroke = Instance.new("UIStroke", GlueBtn)
-GlueStroke.Thickness = 2
-GlueStroke.Color = accent_purple
-
--- [[ NINJA WIDGET (SMALLER FIX) ]]
+-- [[ NINJA WIDGET (STAYING SMALL) ]]
 local Widget = Instance.new("ImageButton", NebulaX)
-Widget.Size = UDim2.new(0, 50, 0, 50) -- Adjusted to standard icon size
+Widget.Size = UDim2.new(0, 50, 0, 50) 
 Widget.Position = UDim2.new(0, 10, 0.5, -25)
 Widget.BackgroundColor3 = bg_color
 Widget.Image = "rbxassetid://13835032549" 
