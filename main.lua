@@ -1,6 +1,13 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- [[ NEBULAX BOOTSTRAPPER ]]
+local success, Rayfield = pcall(function()
+    return loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareDesign/Rayfield/main/source.lua'))()
+end)
 
--- [[ NEBULAX CORE WINDOW ]]
+if not success or not Rayfield then
+    warn("Nebulax: Failed to load UI Library. Check your internet or executor.")
+    return
+end
+
 local Window = Rayfield:CreateWindow({
    Name = "Nebulax | UTDGB Script Hub",
    LoadingTitle = "Nebulax Galactic Interface",
@@ -10,7 +17,7 @@ local Window = Rayfield:CreateWindow({
       Folder = "NebulaxData",
       FileName = "UTDGB_Settings"
    },
-   Theme = "Ocean" -- This gives that blue/dark galactic vibe
+   Theme = "Ocean" 
 })
 
 -- [[ GLOBAL FLAGS ]]
@@ -76,7 +83,7 @@ PerfTab:CreateButton({
                v.Enabled = false
            end
        end
-       Rayfield:Notify({Title = "Boost Applied", Content = "Reduced lag by disabling particles.", Duration = 2})
+       Rayfield:Notify({Title = "Boost Applied", Content = "Reduced lag.", Duration = 2})
    end,
 })
 
@@ -103,18 +110,22 @@ SettingsTab:CreateButton({
 local UpdateTab = Window:CreateTab("Updates", 4483362458)
 UpdateTab:CreateSection("Changelog")
 UpdateTab:CreateLabel("- v1.0.0 Initial Galactic Release")
-UpdateTab:CreateLabel("- Added Glue & Performance Boosters")
 
 -- [[ BACKGROUND ENGINES ]]
 RS.Heartbeat:Connect(function()
-    -- Glue Script Logic
     if flags.glue then
-        -- This logic looks for a folder named 'Enemies' or 'Mobs' 
-        -- Update the path below to match the game's mob folder
-        local enemies = workspace:FindFirstChild("Enemies") 
-        if enemies then
-            for _, mob in pairs(enemies:GetChildren()) do
+        -- Logic to move mobs to you
+        local mobs = workspace:FindFirstChild("Mobs") or workspace:FindFirstChild("Enemies")
+        if mobs then
+            for _, mob in pairs(mobs:GetChildren()) do
                 local hrp = mob:FindFirstChild("HumanoidRootPart")
                 local myHrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
                 if hrp and myHrp then
-                    hrp.CFrame = myHrp.CFrame * CFrame.new(0, 0, -
+                    hrp.CFrame = myHrp.CFrame * CFrame.new(0, 0, -flags.dist)
+                end
+            end
+        end
+    end
+end)
+
+Rayfield:Notify({Title = "Nebulax Hub Loaded", Content = "Ready for UTDGB!", Duration = 5})
