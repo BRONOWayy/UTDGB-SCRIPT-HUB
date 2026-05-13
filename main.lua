@@ -233,3 +233,182 @@ end)
 Yes.MouseButton1Click:Connect(function()
     NebulaX:Destroy()
 end)
+
+local P = game:GetService("Players")
+local lp = P.LocalPlayer
+local UIS = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local R = game:GetService("RunService")
+
+-- Cleanup
+if CoreGui:FindFirstChild("NebulaX_Elite_Final") then CoreGui.NebulaX_Elite_Final:Destroy() end
+
+local NebulaX = Instance.new("ScreenGui", CoreGui)
+NebulaX.Name = "NebulaX_Elite_Final"
+NebulaX.DisplayOrder = 9999
+
+-- [[ CONFIG ]]
+local conf = {
+    glueMode = "None", -- "Persistent", "AutoChain", or "None"
+    dist = 5,
+    currentTarget = nil,
+    ignoreList = {"FROM_THE_FOUNTAIN", "Rig", "Model", "Bone"} -- Filtered based on your UI images
+}
+
+local bg_color = Color3.fromRGB(20, 10, 40) 
+local sidebar_color = Color3.fromRGB(12, 5, 25)
+local accent_purple = Color3.fromRGB(150, 70, 255)
+local text_color = Color3.fromRGB(255, 255, 255)
+
+-- [[ LOGIC ENGINE ]]
+local function isAlive(model)
+    if model and model:FindFirstChild("Humanoid") and model.Humanoid.Health > 0 then
+        return true
+    end
+    return false
+end
+
+local function getClosest()
+    local closest, dist = nil, math.huge
+    local myHrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return nil end
+
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Model") and v:FindFirstChild("Humanoid") and v ~= lp.Character then
+            local isIgnored = false
+            for _, name in pairs(conf.ignoreList) do
+                if v.Name:find(name) then isIgnored = true break end
+            end
+
+            if not isIgnored and v.Humanoid.Health > 0 then
+                local hrp = v:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local d = (myHrp.Position - hrp.Position).Magnitude
+                    if d < dist then
+                        dist = d
+                        closest = v
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+R.Heartbeat:Connect(function()
+    local myHrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+    if not myHrp or conf.glueMode == "None" then return end
+
+    -- Mode 1: Persistent (Target one, stay until dead)
+    if conf.glueMode == "Persistent" then
+        if not isAlive(conf.currentTarget) then
+            conf.currentTarget = getClosest()
+        end
+    -- Mode 2: Auto-Chain (Always jump to the absolute closest)
+    elseif conf.glueMode == "AutoChain" then
+        conf.currentTarget = getClosest()
+    end
+
+    if conf.currentTarget and conf.currentTarget:FindFirstChild("HumanoidRootPart") then
+        local th = conf.currentTarget.HumanoidRootPart
+        th.CanCollide = false
+        th.Velocity = Vector3.zero
+        th.CFrame = myHrp.CFrame * CFrame.new(0, 0, -conf.dist)
+    end
+end)
+
+-- [[ UI CONSTRUCTION ]]
+local Main = Instance.new("Frame", NebulaX)
+Main.Size = UDim2.new(0, 550, 0, 380)
+Main.Position = UDim2.new(0.5, -275, 0.5, -190)
+Main.BackgroundColor3 = bg_color
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", Main).Color = accent_purple
+
+-- Sidebar Title (Stacked NEB X)
+local Sidebar = Instance.new("Frame", Main)
+Sidebar.Size = UDim2.new(0, 160, 1, 0)
+Sidebar.BackgroundColor3 = sidebar_color
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
+
+local Neb = Instance.new("TextLabel", Sidebar)
+Neb.Size = UDim2.new(1, 0, 0, 50)
+Neb.Position = UDim2.new(0,0,0,10)
+Neb.Text = "NEB"
+Neb.TextColor3 = accent_purple
+Neb.Font = Enum.Font.GothamBold
+Neb.TextSize = 30
+Neb.BackgroundTransparency = 1
+
+local X = Instance.new("TextLabel", Sidebar)
+X.Size = UDim2.new(1, 0, 0, 50)
+X.Position = UDim2.new(0,0,0,45)
+X.Text = "X"
+X.TextColor3 = text_color
+X.Font = Enum.Font.GothamBold
+X.TextSize = 38
+X.BackgroundTransparency = 1
+
+-- Page System
+local Container = Instance.new("Frame", Main)
+Container.Size = UDim2.new(1, -180, 1, -50)
+Container.Position = UDim2.new(0, 170, 0, 40)
+Container.BackgroundTransparency = 1
+
+local FarmPage = Instance.new("ScrollingFrame", Container)
+FarmPage.Size = UDim2.new(1, 0, 1, 0)
+FarmPage.BackgroundTransparency = 1
+FarmPage.ScrollBarThickness = 0
+local Layout = Instance.new("UIListLayout", FarmPage)
+Layout.Padding = UDim.new(0, 10)
+
+-- [[ FARMING BUTTONS ]]
+local function MakeModeBtn(name, mode)
+    local b = Instance.new("TextButton", FarmPage)
+    b.Size = UDim2.new(1, -10, 0, 45)
+    b.Text = name
+    b.BackgroundColor3 = Color3.fromRGB(35, 20, 60)
+    b.TextColor3 = text_color
+    b.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", b)
+    
+    R.RenderStepped:Connect(function()
+        b.BackgroundColor3 = (conf.glueMode == mode) and accent_purple or Color3.fromRGB(35, 20, 60)
+    end)
+
+    b.MouseButton1Click:Connect(function()
+        if conf.glueMode == mode then
+            conf.glueMode = "None"
+            conf.currentTarget = nil
+        else
+            conf.glueMode = mode
+        end
+    end)
+end
+
+MakeModeBtn("PERSISTENT GLUE (Wait for Death)", "Persistent")
+MakeModeBtn("AUTO-CHAIN GLUE (Closest)", "AutoChain")
+
+-- Distance Input
+local DistBox = Instance.new("TextBox", FarmPage)
+DistBox.Size = UDim2.new(1, -10, 0, 40)
+DistBox.Text = "Distance: " .. conf.dist
+DistBox.BackgroundColor3 = Color3.fromRGB(15, 10, 30)
+DistBox.TextColor3 = text_color
+Instance.new("UICorner", DistBox)
+DistBox.FocusLost:Connect(function()
+    conf.dist = tonumber(DistBox.Text:match("%d+")) or 5
+    DistBox.Text = "Distance: " .. conf.dist
+end)
+
+-- Window Controls
+local Close = Instance.new("TextButton", Main)
+Close.Size = UDim2.new(0, 30, 0, 30)
+Close.Position = UDim2.new(1, -40, 0, 10)
+Close.Text = "X"
+Close.TextColor3 = Color3.fromRGB(255, 50, 50)
+Close.BackgroundTransparency = 1
+Close.MouseButton1Click:Connect(function() NebulaX:Destroy() end)
