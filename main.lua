@@ -11,21 +11,16 @@ NebulaX.Name = "NebulaX_Final"
 
 -- [[ DATA CONFIG ]]
 _G.NebData = {
-    GlueMode = "None", -- Classic, Reverse, Orbit
+    GlueMode = "None",
     GlueHeight = 2,
-    LookAt = false,
+    OrbitRadius = 15,
     OrbitSpeed = 3,
-    
     Flight = false,
-    FlightMode = "Manual", 
     FlightSpeed = 50,
-    WalkSpeed = 16,
     Noclip = false,
-    InfJump = false,
-    
-    AutoSkill = false,
-    Ignore = {"FROM_THE_FOUNTAIN", "Rig", "Model", "Bone"},
-    Version = "v4.1"
+    M1Spam = false,
+    SelectedTargets = {}, -- Stores names of specifically chosen players
+    Version = "v4.3"
 }
 
 local theme = {
@@ -43,21 +38,24 @@ Main.Position = UDim2.new(0.5, -300, 0.5, -210)
 Main.BackgroundColor3 = theme.bg
 Main.Active, Main.Draggable = true, true
 Instance.new("UICorner", Main)
-
 local MainStroke = Instance.new("UIStroke", Main)
 MainStroke.Color, MainStroke.Thickness = theme.accent, 2
 
--- [[ GALAXY MINIMIZE ICON ]]
+-- [[ GALAXY ICON (Resized/Fitted) ]]
 local GalaxyBtn = Instance.new("TextButton", NebulaX)
-GalaxyBtn.Size = UDim2.new(0, 55, 0, 55)
+GalaxyBtn.Size = UDim2.new(0, 45, 0, 45) -- Smaller, fitted size
 GalaxyBtn.Position = UDim2.new(0.02, 0, 0.85, 0)
 GalaxyBtn.BackgroundColor3 = theme.bg
-GalaxyBtn.Text, GalaxyBtn.TextSize = "🌌", 35
+GalaxyBtn.Text, GalaxyBtn.TextSize = "🌌", 25
 GalaxyBtn.Visible = false
 GalaxyBtn.Active, GalaxyBtn.Draggable = true, true
-Instance.new("UICorner", GalaxyBtn).CornerRadius = UDim.new(0, 50)
-Instance.new("UIStroke", GalaxyBtn).Color = theme.accent
-GalaxyBtn.MouseButton1Click:Connect(function() Main.Visible, GalaxyBtn.Visible = true, false end)
+Instance.new("UICorner", GalaxyBtn).CornerRadius = UDim.new(1, 0)
+local GalStroke = Instance.new("UIStroke", GalaxyBtn)
+GalStroke.Color, GalStroke.Thickness = theme.accent, 2
+
+GalaxyBtn.MouseButton1Click:Connect(function()
+    Main.Visible, GalaxyBtn.Visible = true, false
+end)
 
 -- [[ WINDOW CONTROLS ]]
 local function CreateControl(txt, pos, color, cb)
@@ -73,23 +71,13 @@ end
 CreateControl("-", UDim2.new(1, -75, 0, 10), theme.txt, function() Main.Visible, GalaxyBtn.Visible = false, true end)
 CreateControl("X", UDim2.new(1, -35, 0, 10), Color3.new(1,0,0), function() NebulaX:Destroy() end)
 
--- [[ SIDEBAR & PAGES ]]
+-- [[ TABS ]]
 local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0, 160, 1, 0)
-Sidebar.BackgroundColor3 = theme.side
+Sidebar.Size, Sidebar.BackgroundColor3 = UDim2.new(0, 160, 1, 0), theme.side
 Instance.new("UICorner", Sidebar)
 
-local Title = Instance.new("TextLabel", Sidebar)
-Title.Size = UDim2.new(1, 0, 0, 60)
-Title.Text = "MAX ELITE"
-Title.TextColor3 = theme.accent
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-Title.BackgroundTransparency = 1
-
 local Container = Instance.new("Frame", Main)
-Container.Size = UDim2.new(1, -180, 1, -60)
-Container.Position = UDim2.new(0, 175, 0, 45)
+Container.Size, Container.Position = UDim2.new(1, -180, 1, -60), UDim2.new(0, 175, 0, 45)
 Container.BackgroundTransparency = 1
 
 local Pages = {}
@@ -113,120 +101,104 @@ end
 
 local combat = CreateTab("Combat", 1)
 local movement = CreateTab("Movement", 2)
-local logs = CreateTab("Update Logs", 3)
+local settings = CreateTab("Settings", 3)
+local logs = CreateTab("Update Logs", 4)
 
--- [[ UI ELEMENTS HELPERS ]]
-local function NewButton(txt, parent, cb)
-    local b = Instance.new("TextButton", parent)
+-- [[ PLAYER SELECTOR (TARGET GLUE) ]]
+local TargetFrame = Instance.new("Frame", combat)
+TargetFrame.Size = UDim2.new(1, -10, 0, 150)
+TargetFrame.BackgroundColor3 = theme.dark
+Instance.new("UICorner", TargetFrame)
+
+local TargetScroll = Instance.new("ScrollingFrame", TargetFrame)
+TargetScroll.Size, TargetScroll.Position = UDim2.new(1, -10, 1, -40), UDim2.new(0, 5, 0, 35)
+TargetScroll.BackgroundTransparency, TargetScroll.ScrollBarThickness = 1, 2
+Instance.new("UIListLayout", TargetScroll).Padding = UDim.new(0, 2)
+
+local TargetTitle = Instance.new("TextLabel", TargetFrame)
+TargetTitle.Size, TargetTitle.Text = UDim2.new(1, 0, 0, 30), "SELECT TARGETS TO GLUE"
+TargetTitle.TextColor3, TargetTitle.BackgroundTransparency = theme.accent, 1
+TargetTitle.Font = Enum.Font.GothamBold
+
+local function RefreshPlayers()
+    for _, v in pairs(TargetScroll:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+    for _, p in pairs(P:GetPlayers()) do
+        if p ~= lp then
+            local b = Instance.new("TextButton", TargetScroll)
+            b.Size, b.Text = UDim2.new(1, -10, 0, 25), p.DisplayName
+            b.BackgroundColor3 = table.find(_G.NebData.SelectedTargets, p.Name) and theme.accent or theme.side
+            b.TextColor3 = theme.txt
+            Instance.new("UICorner", b)
+            b.MouseButton1Click:Connect(function()
+                local idx = table.find(_G.NebData.SelectedTargets, p.Name)
+                if idx then table.remove(_G.NebData.SelectedTargets, idx) else table.insert(_G.NebData.SelectedTargets, p.Name) end
+                RefreshPlayers()
+            end)
+        end
+    end
+end
+RefreshPlayers()
+P.PlayerAdded:Connect(RefreshPlayers)
+P.PlayerRemoving:Connect(RefreshPlayers)
+
+-- [[ UI BUTTONS ]]
+local function AddB(txt, p, cb)
+    local b = Instance.new("TextButton", p)
     b.Size, b.Text = UDim2.new(1, -10, 0, 35), txt
     b.BackgroundColor3, b.TextColor3 = theme.dark, theme.txt
-    b.Font = Enum.Font.GothamMedium
     Instance.new("UICorner", b)
     b.MouseButton1Click:Connect(function() cb(b) end)
 end
 
--- [[ COMBAT TAB ]]
-NewButton("Glue: " .. _G.NebData.GlueMode, combat, function(b)
+AddB("M1 Spam: OFF", combat, function(b)
+    _G.NebData.M1Spam = not _G.NebData.M1Spam
+    b.Text = "M1 Spam: " .. (_G.NebData.M1Spam and "ON" or "OFF")
+    b.BackgroundColor3 = _G.NebData.M1Spam and theme.accent or theme.dark
+end)
+
+AddB("Glue Mode: " .. _G.NebData.GlueMode, combat, function(b)
     local m = {"None", "Classic", "Reverse", "Orbit"}
     local i = table.find(m, _G.NebData.GlueMode) or 1
     _G.NebData.GlueMode = m[i % #m + 1]
-    b.Text = "Glue: " .. _G.NebData.GlueMode
-end)
-
-NewButton("Look-At Target: OFF", combat, function(b)
-    _G.NebData.LookAt = not _G.NebData.LookAt
-    b.Text = "Look-At Target: " .. (_G.NebData.LookAt and "ON" or "OFF")
-end)
-
-NewButton("Auto-Skill Spam: OFF", combat, function(b)
-    _G.NebData.AutoSkill = not _G.NebData.AutoSkill
-    b.Text = "Auto-Skill Spam: " .. (_G.NebData.AutoSkill and "ON" or "OFF")
-end)
-
--- [[ MOVEMENT TAB ]]
-NewButton("Flight: OFF", movement, function(b)
-    _G.NebData.Flight = not _G.NebData.Flight
-    b.Text = "Flight: " .. (_G.NebData.Flight and "ON" or "OFF")
-end)
-
-NewButton("Flight Mode: " .. _G.NebData.FlightMode, movement, function(b)
-    _G.NebData.FlightMode = (_G.NebData.FlightMode == "Manual" and "Automatic" or "Manual")
-    b.Text = "Flight Mode: " .. _G.NebData.FlightMode
-end)
-
-NewButton("Noclip: OFF", movement, function(b)
-    _G.NebData.Noclip = not _G.NebData.Noclip
-    b.Text = "Noclip: " .. (_G.NebData.Noclip and "ON" or "OFF")
+    b.Text = "Glue Mode: " .. _G.NebData.GlueMode
 end)
 
 -- [[ LOGS ]]
 local LT = Instance.new("TextLabel", logs)
 LT.Size, LT.BackgroundTransparency = UDim2.new(1,0,1,0), 1
-LT.TextColor3, LT.Font = theme.txt, Enum.Font.Gotham
-LT.Text = "v4.1 Final Build:\n- Integrated UI & Engine\n- Multi-Target Orbit Logic\n- Manual/Auto Flight Modes\n- Speed/Height Config Ready\n- Galaxy Toggle System\n- Made by Max"
+LT.TextColor3, LT.Text = theme.txt, "v4.3 Update Log:\n- Added Manual Target Selector\n- Fitted Galaxy Icon size\n- Fixed Mouse Lock bug\n- Radius Orbit logic polished\n- Made by Max"
 LT.TextYAlignment = 0
 
--- [[ THE ENGINE (Logic Loop) ]]
+-- [[ CORE ENGINE ]]
 R.Heartbeat:Connect(function()
     local char = lp.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum then return end
+    if not hrp then return end
 
-    -- Flight Engine
+    if _G.NebData.M1Spam and not Main.Visible then VU:Button1Down(Vector2.new(0,0)) end
+
     if _G.NebData.Flight then
         hrp.Velocity = Vector3.zero
-        if _G.NebData.FlightMode == "Manual" then
-            hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (_G.NebData.FlightSpeed / 10))
-        else
-            if UIS:IsKeyDown(Enum.KeyCode.W) then hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, -_G.NebData.FlightSpeed / 10) end
-            if UIS:IsKeyDown(Enum.KeyCode.S) then hrp.CFrame = hrp.CFrame * CFrame.new(0, 0, _G.NebData.FlightSpeed / 10) end
-        end
+        hrp.CFrame = hrp.CFrame + (char.Humanoid.MoveDirection * (_G.NebData.FlightSpeed / 10))
     end
 
-    -- Noclip Engine
-    if _G.NebData.Noclip then
-        for _, v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
-    end
-
-    -- Multi-Glue / Orbit Engine
     if _G.NebData.GlueMode ~= "None" then
         local targets = {}
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("Model") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v ~= char then
-                local ign = false
-                for _, n in pairs(_G.NebData.Ignore) do if v.Name:find(n) then ign = true end end
-                if not ign and v:FindFirstChild("HumanoidRootPart") then table.insert(targets, v.HumanoidRootPart) end
+        for _, name in pairs(_G.NebData.SelectedTargets) do
+            local p = P:FindFirstChild(name)
+            if p and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                table.insert(targets, p.Character.HumanoidRootPart)
             end
-            if #targets >= 3 then break end
         end
 
         for i, t in ipairs(targets) do
-            t.Velocity, t.RotVelocity = Vector3.zero, Vector3.zero
+            t.Velocity = Vector3.zero
             if _G.NebData.GlueMode == "Classic" then
-                t.CFrame = hrp.CFrame * CFrame.new(0, _G.NebData.GlueHeight, -(i * 3))
-            elseif _G.NebData.GlueMode == "Reverse" then
-                hrp.CFrame = t.CFrame * CFrame.new(0, 0, 3)
+                t.CFrame = hrp.CFrame * CFrame.new(0, _G.NebData.GlueHeight, -(i * 4))
             elseif _G.NebData.GlueMode == "Orbit" then
                 local angle = (tick() * _G.NebData.OrbitSpeed) + (i * (math.pi * 2 / #targets))
-                t.CFrame = hrp.CFrame * CFrame.Angles(0, angle, 0) * CFrame.new(0, _G.NebData.GlueHeight, 7)
+                t.CFrame = hrp.CFrame * CFrame.Angles(0, angle, 0) * CFrame.new(0, _G.NebData.GlueHeight, _G.NebData.OrbitRadius)
             end
-            if _G.NebData.LookAt then hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(t.Position.X, hrp.Position.Y, t.Position.Z)) end
         end
     end
-    
-    -- Auto Skill Engine
-    if _G.NebData.AutoSkill then
-        VU:Button1Down(Vector2.new())
-    end
 end)
-
--- Border Resize logic
-MainStroke.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then isResizing = true end end)
-UIS.InputChanged:Connect(function(i)
-    if isResizing and i.UserInputType == Enum.UserInputType.MouseMovement then
-        local mPos = UIS:GetMouseLocation()
-        Main.Size = UDim2.new(0, math.max(450, mPos.X - Main.AbsolutePosition.X), 0, math.max(300, mPos.Y - Main.AbsolutePosition.Y))
-    end
-end)
-UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then isResizing = false end end)
