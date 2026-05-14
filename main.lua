@@ -1,197 +1,168 @@
--- [[ NEBULAX v1.3: ULTRA-SOVEREIGN HUB ]]
--- [[ OWNER: MAX | THE ULTIMATE DEFINITIVE BUILD ]]
+-- [[ NEBULAX v2.0: PRO ENGINE ]]
+-- [[ OWNER: MAX | ADVANCED EXECUTOR BUILD ]]
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local RS = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
-local Debris = game:GetService("Debris")
-local Lighting = game:GetService("Lighting")
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local CG = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
+local LP = Players.LocalPlayer
+local Mouse = LP:GetMouse()
 
--- [[ 1. GLOBAL STATE & CONFIG ]]
-getgenv().NebulaConfig = {
-    -- Security
-    AntiKick = true, AntiLog = true, MetaHook = true,
-    -- Movement
-    Flight = false, Speed = 160, Noclip = false, InfJump = false,
-    -- Combat
-    Mode = "None", Target = nil, OrbitSpd = 5, Radius = 20, StalkerDist = 12,
-    AutoClicker = false, KillAura = false, AuraRange = 25,
-    -- Visuals
-    ESP = false, Tracers = false, FullBright = false,
-    -- UI Style
-    Accent = Color3.fromRGB(255, 0, 180), -- Hyper Magenta
-    BG = Color3.fromRGB(15, 12, 28),      -- Midnight Violet
-    Sidebar = Color3.fromRGB(10, 8, 20),
-    Connections = {}
+-- [[ 1. PRO STATE & CONFIGURATION ]]
+getgenv().NebulaPro = {
+    Flight = false, Speed = 160, Noclip = false, God = false,
+    Mode = "None", Target = nil, OrbitS = 5, Radius = 20,
+    Aimbot = false, AimPart = "Head", AimSmooth = 0.5,
+    ESPBoxes = false, ESPTracers = false,
+    Accent = Color3.fromRGB(0, 255, 200), -- Switched to Pro Cyber-Cyan
+    BG = Color3.fromRGB(10, 10, 15)
 }
+local PRO = getgenv().NebulaPro
 
-local CFG = getgenv().NebulaConfig
-
--- [[ 2. THE VAULT: SUPREME PROTECTION ]]
-local function InitializeVault()
+-- [[ 2. ADVANCED VAULT SECURITY ]]
+local function DeepSecure()
     local mt = getrawmetatable(game)
     setreadonly(mt, false)
     local oldNamecall = mt.__namecall
+    local oldIndex = mt.__index
+
     mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        if CFG.AntiKick and (method == "Kick" or method == "kick") then return task.wait(9e9) end
-        if CFG.AntiLog and method == "FireServer" then
-            local name = tostring(self)
-            if name:find("Log") or name:find("Error") or name:find("Report") then return nil end
-        end
+        local m = getnamecallmethod()
+        if m == "Kick" or m == "kick" then return task.wait(9e9) end
+        if m == "FireServer" and tostring(self):lower():find("report") then return nil end
         return oldNamecall(self, ...)
     end)
+    
+    -- Anti-UI Detection
+    mt.__index = newcclosure(function(t, k)
+        if t == CG and k == "NebulaX_Pro" then return nil end
+        return oldIndex(t, k)
+    end)
     setreadonly(mt, true)
-    print("--- 🛡️ VAULT SECURITY ACTIVE ---")
 end
-pcall(InitializeVault)
+pcall(DeepSecure)
 
--- [[ 3. THE UI CORE (LUNA'S ARCHIVE DESIGN) ]]
-local NebulaUI = Instance.new("ScreenGui", CoreGui)
-NebulaUI.Name = "NebulaX_Ultra"
-
-local Main = Instance.new("Frame", NebulaUI)
-Main.Size = UDim2.new(0, 750, 0, 480)
-Main.Position = UDim2.new(0.5, -375, 0.5, -240)
-Main.BackgroundColor3 = CFG.BG
-Main.BorderSizePixel = 0
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
-local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = CFG.Accent; MainStroke.Thickness = 2
-
--- Sidebar
-local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0, 200, 1, 0); Sidebar.BackgroundColor3 = CFG.Sidebar; Sidebar.BorderSizePixel = 0
-Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
-
-local Logo = Instance.new("TextLabel", Sidebar)
-Logo.Size = UDim2.new(1, 0, 0, 80); Logo.Text = "NEBULAX"; Logo.TextColor3 = CFG.Accent
-Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 35; Logo.BackgroundTransparency = 1
-
-local OwnerTag = Instance.new("TextLabel", Sidebar)
-OwnerTag.Size = UDim2.new(1, 0, 0, 40); OwnerTag.Position = UDim2.new(0,0,1,-50)
-OwnerTag.Text = "OWNER: MAX"; OwnerTag.TextColor3 = CFG.Accent; OwnerTag.Font = Enum.Font.GothamBold; OwnerTag.BackgroundTransparency = 1
-
--- Scrolling Content
-local Content = Instance.new("ScrollingFrame", Main)
-Content.Size = UDim2.new(1, -220, 1, -20); Content.Position = UDim2.new(0, 210, 0, 10)
-Content.BackgroundTransparency = 1; Content.ScrollBarThickness = 3; Content.CanvasSize = UDim2.new(0,0,2,0)
-local List = Instance.new("UIListLayout", Content); List.Padding = UDim.new(0, 10)
-
--- [[ 4. HUB COMPONENTS ]]
-local function CreateToggle(name, var, callback)
-    local btn = Instance.new("TextButton", Content)
-    btn.Size = UDim2.new(1, -15, 0, 50); btn.BackgroundColor3 = Color3.fromRGB(30, 25, 50)
-    btn.Text = "   " .. name; btn.TextColor3 = Color3.new(1,1,1); btn.Font = Enum.Font.GothamBold
-    btn.TextXAlignment = Enum.TextXAlignment.Left; Instance.new("UICorner", btn)
+-- [[ 3. CUSTOM NOTIFICATION ENGINE ]]
+local function Notify(text)
+    local sg = CG:FindFirstChild("NebulaX_Pro")
+    if not sg then return end
+    local notif = Instance.new("TextLabel", sg)
+    notif.Size = UDim2.new(0, 250, 0, 40); notif.Position = UDim2.new(1, 10, 1, -50)
+    notif.BackgroundColor3 = Color3.fromRGB(20, 20, 25); notif.TextColor3 = PRO.Accent
+    notif.Text = "  [PRO]: " .. text; notif.Font = Enum.Font.GothamBold; notif.TextXAlignment = 0
+    Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 6)
     
-    local Status = Instance.new("Frame", btn)
-    Status.Size = UDim2.new(0, 6, 1, 0); Status.Position = UDim2.new(1, -6, 0, 0)
-    Status.BackgroundColor3 = Color3.fromRGB(80, 80, 80); Instance.new("UICorner", Status)
-    
-    btn.MouseButton1Click:Connect(function()
-        CFG[var] = not CFG[var]
-        Status.BackgroundColor3 = CFG[var] and CFG.Accent or Color3.fromRGB(80, 80, 80)
-        btn.TextColor3 = CFG[var] and CFG.Accent or Color3.new(1,1,1)
-        if callback then callback(CFG[var]) end
+    local ts = game:GetService("TweenService")
+    ts:Create(notif, TweenInfo.new(0.3), {Position = UDim2.new(1, -260, 1, -50)}):Play()
+    task.delay(3, function()
+        ts:Create(notif, TweenInfo.new(0.3), {Position = UDim2.new(1, 10, 1, -50)}):Play()
+        task.wait(0.3); notif:Destroy()
     end)
 end
 
--- [[ 5. THE ENGINES (ARCHITECT Z) ]]
+-- [[ 4. THE PRO UI ARCHITECTURE ]]
+local Screen = Instance.new("ScreenGui", CG); Screen.Name = "NebulaX_Pro"
+local Main = Instance.new("Frame", Screen); Main.Size = UDim2.new(0, 800, 0, 500); Main.Position = UDim2.new(0.5, -400, 0.5, -250)
+Main.BackgroundColor3 = PRO.BG; Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
+local Stroke = Instance.new("UIStroke", Main); Stroke.Color = PRO.Accent; Stroke.Thickness = 1
 
--- Movement & Flight
-CFG.Connections["Movement"] = RunService.Stepped:Connect(function()
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
+local Side = Instance.new("Frame", Main); Side.Size = UDim2.new(0, 200, 1, 0); Side.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Instance.new("UICorner", Side).CornerRadius = UDim.new(0, 8)
+local Logo = Instance.new("TextLabel", Side); Logo.Size = UDim2.new(1, 0, 0, 70); Logo.Text = "NEBULAX PRO"; Logo.TextColor3 = PRO.Accent
+Logo.Font = Enum.Font.GothamBlack; Logo.TextSize = 24; Logo.BackgroundTransparency = 1
+local User = Instance.new("TextLabel", Side); User.Size = UDim2.new(1, 0, 0, 30); User.Position = UDim2.new(0,0,1,-30)
+User.Text = "OWNER: MAX"; User.TextColor3 = PRO.Accent; User.Font = Enum.Font.GothamBold; User.BackgroundTransparency = 1
 
-    if CFG.Flight then
-        hrp.Velocity = (Mouse.Hit.p - hrp.Position).Unit * CFG.Speed
-    end
-    if CFG.Noclip then
-        for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
-        end
-    end
-end)
+local Scroll = Instance.new("ScrollingFrame", Main); Scroll.Size = UDim2.new(1, -220, 1, -20); Scroll.Position = UDim2.new(0, 210, 0, 10)
+Scroll.BackgroundTransparency = 1; Scroll.ScrollBarThickness = 2; Scroll.CanvasSize = UDim2.new(0,0,3,0)
+local List = Instance.new("UIListLayout", Scroll); List.Padding = UDim.new(0, 6)
 
--- Infinite Jump
-UIS.JumpRequest:Connect(function()
-    if CFG.InfJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
-    end
-end)
-
--- Combat Engines
-CFG.Connections["Combat"] = RunService.Heartbeat:Connect(function()
-    if not CFG.Target or not CFG.Target:FindFirstChild("HumanoidRootPart") then return end
-    local myHRP = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local tHRP = CFG.Target.HumanoidRootPart
-
-    if CFG.Mode == "Orbit" then
-        local t = tick() * CFG.OrbitSpd
-        tHRP.CFrame = myHRP.CFrame * CFrame.new(math.cos(t) * CFG.Radius, 5, math.sin(t) * CFG.Radius)
-        tHRP.Velocity = Vector3.zero
-    elseif CFG.Mode == "Glue" then
-        tHRP.CFrame = myHRP.CFrame * CFrame.new(0, 0, -CFG.StalkerDist)
-        tHRP.Velocity = Vector3.zero
-    end
-end)
-
--- [[ 6. POPULATING THE HUB ]]
-CreateToggle("FLIGHT (L)", "Flight")
-CreateToggle("NOCLIP (K)", "Noclip")
-CreateToggle("INFINITE JUMP", "InfJump")
-CreateToggle("GOD MODE (G)", "GodMode", function(state)
-    if state then
-        LocalPlayer.Character.Humanoid.MaxHealth = 9e18
-        LocalPlayer.Character.Humanoid.Health = 9e18
-    end
-end)
-CreateToggle("FULL BRIGHT", "FullBright", function(state)
-    Lighting.Brightness = state and 2 or 1
-    Lighting.ClockTime = state and 14 or 12
-    Lighting.GlobalShadows = not state
-end)
-
--- [[ 7. DYNAMIC RESIZER & DRAG ]]
-local function EnableDrag(f)
-    local drag, start, startPos
-    f.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = true; start = i.Position; startPos = f.Position end end)
-    UIS.InputChanged:Connect(function(i) if drag and i.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = i.Position - start
-        f.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end end)
-    UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end end)
+-- [[ 5. PRO COMPONENT BUILDER ]]
+local function Toggle(name, var, callback)
+    local b = Instance.new("TextButton", Scroll); b.Size = UDim2.new(1, -10, 0, 40); b.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    b.Text = "  " .. name; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; b.TextXAlignment = 0; Instance.new("UICorner", b)
+    local s = Instance.new("Frame", b); s.Size = UDim2.new(0, 4, 1, 0); s.Position = UDim2.new(1,-4,0,0); s.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    b.MouseButton1Click:Connect(function()
+        PRO[var] = not PRO[var]
+        s.BackgroundColor3 = PRO[var] and PRO.Accent or Color3.fromRGB(50,50,50)
+        b.TextColor3 = PRO[var] and PRO.Accent or Color3.new(1,1,1)
+        Notify(name .. " set to " .. tostring(PRO[var]))
+        if callback then callback(PRO[var]) end
+    end)
 end
 
-local Resizer = Instance.new("TextButton", Main)
-Resizer.Size = UDim2.new(0, 35, 0, 35); Resizer.Position = UDim2.new(1, -35, 1, -35)
-Resizer.Text = "◢"; Resizer.TextColor3 = CFG.Accent; Resizer.BackgroundTransparency = 1; Resizer.TextSize = 30
-local isResizing = false
-Resizer.MouseButton1Down:Connect(function() isResizing = true end)
-UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then isResizing = false end end)
+Toggle("FLIGHT [L]", "Flight")
+Toggle("NOCLIP [K]", "Noclip")
+Toggle("AIMBOT (CAMERA LOCK)", "Aimbot")
+Toggle("ESP BOXES (DRAWING API)", "ESPBoxes")
 
-RunService.RenderStepped:Connect(function()
-    if isResizing then
+-- [[ 6. EXECUTOR DRAWING API ESP ]]
+local Drawings = {}
+RS.RenderStepped:Connect(function()
+    if PRO.ESPBoxes then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = p.Character.HumanoidRootPart
+                local pos, vis = Camera:WorldToViewportPoint(hrp.Position)
+                if vis then
+                    if not Drawings[p.Name] then
+                        Drawings[p.Name] = Drawing.new("Square")
+                        Drawings[p.Name].Color = PRO.Accent
+                        Drawings[p.Name].Thickness = 1
+                        Drawings[p.Name].Filled = false
+                    end
+                    local scale = 1000 / pos.Z
+                    Drawings[p.Name].Size = Vector2.new(40 * scale, 60 * scale)
+                    Drawings[p.Name].Position = Vector2.new(pos.X - Drawings[p.Name].Size.X/2, pos.Y - Drawings[p.Name].Size.Y/2)
+                    Drawings[p.Name].Visible = true
+                else
+                    if Drawings[p.Name] then Drawings[p.Name].Visible = false end
+                end
+            elseif Drawings[p.Name] then Drawings[p.Name].Visible = false end
+        end
+    else
+        for k, v in pairs(Drawings) do v.Visible = false end
+    end
+end)
+
+-- [[ 7. CAMERA AIMBOT & MOVEMENT ]]
+RS.Stepped:Connect(function()
+    local c = LP.Character; if not c then return end
+    
+    -- Movement
+    if PRO.Flight then c.HumanoidRootPart.Velocity = (Mouse.Hit.p - c.HumanoidRootPart.Position).Unit * PRO.Speed end
+    if PRO.Noclip then for _,v in pairs(c:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
+    
+    -- Aimbot
+    if PRO.Aimbot and PRO.Target and PRO.Target:FindFirstChild(PRO.AimPart) then
+        local tPos = PRO.Target[PRO.AimPart].Position
+        Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, tPos), PRO.AimSmooth)
+    end
+end)
+
+-- [[ 8. ADVANCED BINDS & RESIZER ]]
+UIS.InputBegan:Connect(function(i, gpe)
+    if gpe then return end
+    local k = i.KeyCode.Name:lower()
+    if k == "l" then PRO.Flight = not PRO.Flight; Notify("Flight: " .. tostring(PRO.Flight))
+    elseif k == "k" then PRO.Noclip = not PRO.Noclip; Notify("Noclip: " .. tostring(PRO.Noclip))
+    elseif k == "z" then PRO.Mode = "Orbit"; PRO.Target = (Mouse.Target and Mouse.Target.Parent:FindFirstChild("Humanoid") and Mouse.Target.Parent); Notify("Orbit Target Acquired")
+    elseif k == "x" then PRO.Mode = "Glue"; PRO.Target = (Mouse.Target and Mouse.Target.Parent:FindFirstChild("Humanoid") and Mouse.Target.Parent); Notify("Glue Target Acquired")
+    elseif k == "h" then PRO.Mode = "None"; PRO.Target = nil; Notify("Engines Halted")
+    end
+end)
+
+local Rez = Instance.new("TextButton", Main); Rez.Size = UDim2.new(0,30,0,30); Rez.Position = UDim2.new(1,-30,1,-30)
+Rez.Text = "◢"; Rez.TextColor3 = PRO.Accent; Rez.BackgroundTransparency = 1; Rez.TextSize = 25
+local drg = false; Rez.MouseButton1Down:Connect(function() drg = true end)
+UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then drg = false end end)
+RS.RenderStepped:Connect(function()
+    if drg then
         local m = UIS:GetMouseLocation()
         Main.Size = UDim2.new(0, math.clamp(m.X - Main.AbsolutePosition.X, 450, 950), 0, math.clamp(m.Y - Main.AbsolutePosition.Y, 350, 750))
     end
 end)
 
--- [[ 8. FINAL CONTROLS ]]
-UIS.InputBegan:Connect(function(i, gpe)
-    if gpe then return end
-    local k = i.KeyCode.Name:lower()
-    if k == "l" then CFG.Flight = not CFG.Flight
-    elseif k == "k" then CFG.Noclip = not CFG.Noclip
-    elseif k == "z" then CFG.Mode = "Orbit"; CFG.Target = (Mouse.Target and Mouse.Target.Parent:FindFirstChild("Humanoid") and Mouse.Target.Parent)
-    elseif k == "x" then CFG.Mode = "Glue"; CFG.Target = (Mouse.Target and Mouse.Target.Parent:FindFirstChild("Humanoid") and Mouse.Target.Parent)
-    elseif k == "h" then CFG.Mode = "None"; CFG.Target = nil
-    end
-end)
-
-EnableDrag(Main)
-print("--- 🌌 NEBULAX ULTRA-SOVEREIGN HUB v1.3 ONLINE ---")
+Notify("PRO ENGINE INITIALIZED")
