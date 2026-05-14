@@ -1,345 +1,224 @@
--- [[ NEBULAX OFFICIAL VERSION 1.2 ]]
--- [[ ARCHITECTURE: HEAVYWEIGHT TERMINAL ]]
--- [[ AUTHOR: MAX ]]
+-- [[ NEBULAX ELITE TERMINAL ]]
+-- [[ CREATED BY: MAX ]]
+-- [[ VERSION: 5.5 - MICRO-ELITE BUILD ]]
 
--- [[ SYSTEM SERVICES ]]
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local VirtualUser = game:GetService("VirtualUser")
-local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
+local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
 
--- [[ DATA STRUCTURE ]]
-_G.NebulaX_Core = {
-    -- Visual Config
-    RainbowMode = false,
-    CurrentEmoji = "🌌",
-    MenuOpen = true,
-    
-    -- Combat & Glue Engine
-    GlueState = "None", -- Classic, Reverse, Orbit
-    TargetTable = {},
-    LookAtActive = false,
-    AutoClickerActive = false,
-    HeightOffset = 3,
-    OrbitRadius = 18,
-    OrbitSpeed = 4,
-    
-    -- Movement Engine
-    FlightEnabled = false,
-    FlightSpeedValue = 85,
-    FlightControlStyle = "Manual",
-    
-    -- Server Logic
-    PlayerFilter = ""
-}
-
--- [[ COLOR PALETTE ]]
-local Colors = {
-    Background = Color3.fromRGB(15, 12, 28),
-    Sidebar = Color3.fromRGB(8, 6, 18),
-    Accent = Color3.fromRGB(160, 80, 255),
-    MainText = Color3.fromRGB(255, 255, 255),
-    SecondaryText = Color3.fromRGB(200, 200, 200),
-    ElementBG = Color3.fromRGB(25, 20, 45),
-    CloseRed = Color3.fromRGB(200, 40, 40)
-}
-
--- [[ GUI CLEANUP ]]
-if CoreGui:FindFirstChild("NebulaX_V12_Heavy") then
-    CoreGui.NebulaX_V12_Heavy:Destroy()
+-- [[ PRE-EXECUTION CLEANUP ]]
+if CoreGui:FindFirstChild("NebulaX_Master") then
+    CoreGui.NebulaX_Master:Destroy()
 end
 
--- [[ MAIN CONTAINER ]]
-local NebulaX = Instance.new("ScreenGui")
-NebulaX.Name = "NebulaX_V12_Heavy"
-NebulaX.Parent = CoreGui
-NebulaX.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- [[ GLOBAL CONFIGURATION ]]
+_G.NebulaConfig = {
+    -- Combat (Glue) + 4 Sub-Features
+    GlueEnabled = false,
+    GlueMode = "None",
+    GlueHeight = 3,
+    OrbitRadius = 20,
+    OrbitSpeed = 4,
+    GlueDesync = false,    -- 1. Jitter motion
+    AutoLook = false,      -- 2. Force face target
+    VelocityLock = false,  -- 3. Zero out target physics
+    OrbitDirection = 1,    -- 4. Clockwise/Counter toggle
 
--- [[ MINIMIZED ICON (THE EMOJI) ]]
-local MinIcon = Instance.new("TextButton")
-MinIcon.Name = "NebulaIcon"
-MinIcon.Parent = NebulaX
-MinIcon.Size = UDim2.new(0, 60, 0, 60)
-MinIcon.Position = UDim2.new(0.02, 0, 0.8, 0)
-MinIcon.BackgroundColor3 = Colors.Background
-MinIcon.Text = _G.NebulaX_Core.CurrentEmoji
-MinIcon.TextSize = 35
-MinIcon.Visible = false
-MinIcon.Active = true
-MinIcon.Draggable = true
-local IconCorner = Instance.new("UICorner", MinIcon)
-IconCorner.CornerRadius = UDim.new(1, 0)
-local IconStroke = Instance.new("UIStroke", MinIcon)
-IconStroke.Color = Colors.Accent
-IconStroke.Thickness = 2
+    -- Movement (Flight) + 4 Sub-Features
+    FlightEnabled = false,
+    FlightMode = "Manual", 
+    FlightSpeed = 75,
+    Noclip = false,        -- 1. Collision delete
+    InfJump = false,       -- 2. Air jump enabled
+    NoFall = false,        -- 3. Fall damage bypass
+    SpeedMult = 1,         -- 4. Walkspeed multiplier
 
--- [[ MAIN SQUARE FRAME ]]
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = NebulaX
-MainFrame.Size = UDim2.new(0, 720, 0, 520)
-MainFrame.Position = UDim2.new(0.5, -360, 0.5, -260)
-MainFrame.BackgroundColor3 = Colors.Background
+    -- Utility + 4 Sub-Features
+    M1Spam = false,
+    FPSBoost = false,      -- 1. Graphics reducer
+    ServerHop = false,     -- 2. Universal place hopper
+    FullBright = false,    -- 3. Gamma override
+    HiddenDev = false,     -- 4. Console cloaking
+    
+    SelectedTargets = {},
+    SaveOnExit = true
+}
+
+-- [[ THEME ENGINE ]]
+local Colors = {
+    MainBG = Color3.fromRGB(12, 10, 20),
+    SidebarBG = Color3.fromRGB(6, 4, 10),
+    Accent = Color3.fromRGB(180, 100, 255),
+    Text = Color3.fromRGB(240, 240, 240),
+    ButtonNormal = Color3.fromRGB(25, 20, 35),
+    ButtonActive = Color3.fromRGB(180, 100, 255),
+    Danger = Color3.fromRGB(255, 60, 60)
+}
+
+-- [[ UI INITIALIZATION - SCALED DOWN ]]
+local NebulaX = Instance.new("ScreenGui", CoreGui)
+NebulaX.Name = "NebulaX_Master"
+
+local MainFrame = Instance.new("Frame", NebulaX)
+MainFrame.Name = "MainHub"
+MainFrame.Size = UDim2.new(0, 520, 0, 380) -- Smaller, more compact footprint
+MainFrame.Position = UDim2.new(0.5, -260, 0.5, -190)
+MainFrame.BackgroundColor3 = Colors.MainBG
 MainFrame.Active = true
 MainFrame.Draggable = true
-local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 12)
-local MainStroke = Instance.new("UIStroke", MainFrame)
-MainStroke.Color = Colors.Accent
-MainStroke.Thickness = 2
+Instance.new("UICorner", MainFrame)
+local MainStroke = Instance.new("UIStroke", MainFrame); MainStroke.Color = Colors.Accent; MainStroke.Thickness = 1.5
 
--- [[ SIDEBAR RAIL ]]
-local Sidebar = Instance.new("Frame")
-Sidebar.Name = "Sidebar"
-Sidebar.Parent = MainFrame
-Sidebar.Size = UDim2.new(0, 200, 1, 0)
-Sidebar.BackgroundColor3 = Colors.Sidebar
-Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
+-- [[ SIDEBAR & TABS ]]
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Size = UDim2.new(0, 140, 1, 0)
+Sidebar.BackgroundColor3 = Colors.SidebarBG
+Instance.new("UICorner", Sidebar)
 
-local Logo = Instance.new("TextLabel")
-Logo.Name = "NebulaLogo"
-Logo.Parent = Sidebar
-Logo.Size = UDim2.new(1, 0, 0, 70)
-Logo.BackgroundTransparency = 1
-Logo.Text = "NEBULA X v1.2"
-Logo.TextColor3 = Colors.Accent
-Logo.Font = Enum.Font.GothamBold
-Logo.TextSize = 24
+local PageHolder = Instance.new("Frame", MainFrame)
+PageHolder.Size = UDim2.new(1, -160, 1, -60)
+PageHolder.Position = UDim2.new(0, 150, 0, 50)
+PageHolder.BackgroundTransparency = 1
 
--- [[ DEDICATED CREDIT MENU (STAYS ON TOP) ]]
-local CreditFrame = Instance.new("Frame")
-CreditFrame.Name = "CreditsMenu"
-CreditFrame.Parent = Sidebar
-CreditFrame.Size = UDim2.new(0.9, 0, 0, 100)
-CreditFrame.Position = UDim2.new(0.05, 0, 1, -110)
-CreditFrame.BackgroundColor3 = Colors.ElementBG
-Instance.new("UICorner", CreditFrame)
+local Pages = {}
+local function AddTab(name)
+    local NewPage = Instance.new("ScrollingFrame", PageHolder)
+    NewPage.Size = UDim2.new(1, 0, 1, 0)
+    NewPage.BackgroundTransparency = 1
+    NewPage.Visible = (#PageHolder:GetChildren() == 1)
+    NewPage.ScrollBarThickness = 0
+    Instance.new("UIListLayout", NewPage).Padding = UDim.new(0, 8)
+    Pages[name] = NewPage
 
-local CreditHeader = Instance.new("TextLabel", CreditFrame)
-CreditHeader.Size = UDim2.new(1, 0, 0, 40)
-CreditHeader.BackgroundTransparency = 1
-CreditHeader.Text = "SYSTEM OWNER"
-CreditHeader.TextColor3 = Colors.Accent
-CreditHeader.Font = Enum.Font.GothamBold
-CreditHeader.TextSize = 14
+    local TabBtn = Instance.new("TextButton", Sidebar)
+    TabBtn.Size = UDim2.new(0.9, 0, 0, 35)
+    TabBtn.Position = UDim2.new(0.05, 0, 0, 80 + (#Sidebar:GetChildren()-2) * 40)
+    TabBtn.Text = name; TabBtn.TextColor3 = Colors.Text; TabBtn.BackgroundColor3 = NewPage.Visible and Colors.Accent or Colors.ButtonNormal
+    Instance.new("UICorner", TabBtn)
 
-local CreditName = Instance.new("TextLabel", CreditFrame)
-CreditName.Size = UDim2.new(1, 0, 0, 40)
-CreditName.Position = UDim2.new(0, 0, 0, 40)
-CreditName.BackgroundTransparency = 1
-CreditName.Text = "MAX"
-CreditName.TextColor3 = Colors.MainText
-CreditName.Font = Enum.Font.GothamBold
-CreditName.TextSize = 26
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, p in pairs(Pages) do p.Visible = false end
+        for _, b in pairs(Sidebar:GetChildren()) do if b:IsA("TextButton") then b.BackgroundColor3 = Colors.ButtonNormal end end
+        NewPage.Visible = true; TabBtn.BackgroundColor3 = Colors.Accent
+    end)
+    return NewPage
+end
 
--- [[ NAVIGATION SYSTEM ]]
-local Pages = Instance.new("Frame", MainFrame)
-Pages.Size = UDim2.new(1, -220, 1, -100)
-Pages.Position = UDim2.new(0, 210, 0, 70)
-Pages.BackgroundTransparency = 1
+local CombatTab = AddTab("Havoc")
+local MoveTab = AddTab("Phase")
+local UtilTab = AddTab("Terminal")
+local LogTab = AddTab("Status")
 
-local CombatP = Instance.new("ScrollingFrame", Pages)
-CombatP.Size = UDim2.new(1, 0, 1, 0)
-CombatP.Visible = true
-CombatP.BackgroundTransparency = 1
-Instance.new("UIListLayout", CombatP).Padding = UDim.new(0, 10)
+-- [[ PLAYER SELECTOR ENGINE ]]
+local TargetScroll = Instance.new("ScrollingFrame", CombatTab)
+TargetScroll.Size = UDim2.new(1, -5, 0, 140); TargetScroll.BackgroundTransparency = 1; TargetScroll.ScrollBarThickness = 2
+Instance.new("UIListLayout", TargetScroll)
 
-local MovementP = Instance.new("ScrollingFrame", Pages)
-MovementP.Size = UDim2.new(1, 0, 1, 0)
-MovementP.Visible = false
-MovementP.BackgroundTransparency = 1
-Instance.new("UIListLayout", MovementP).Padding = UDim.new(0, 10)
-
-local ServerP = Instance.new("ScrollingFrame", Pages)
-ServerP.Size = UDim2.new(1, 0, 1, 0)
-ServerP.Visible = false
-ServerP.BackgroundTransparency = 1
-Instance.new("UIListLayout", ServerP).Padding = UDim.new(0, 10)
-
-local SettingsP = Instance.new("ScrollingFrame", Pages)
-SettingsP.Size = UDim2.new(1, 0, 1, 0)
-SettingsP.Visible = false
-SettingsP.BackgroundTransparency = 1
-Instance.new("UIListLayout", SettingsP).Padding = UDim.new(0, 10)
-
--- [[ COMBAT: TARGET SELECT SYSTEM ]]
-local TFrame = Instance.new("Frame", CombatP)
-TFrame.Size = UDim2.new(1, -10, 0, 180)
-TFrame.BackgroundColor3 = Colors.Sidebar
-Instance.new("UICorner", TFrame)
-
-local TTitle = Instance.new("TextLabel", TFrame)
-TTitle.Size = UDim2.new(1, 0, 0, 30)
-TTitle.Text = "TARGET SELECTOR"
-TTitle.TextColor3 = Colors.Accent
-TTitle.BackgroundTransparency = 1
-TTitle.Font = Enum.Font.GothamBold
-
-local TScroll = Instance.new("ScrollingFrame", TFrame)
-TScroll.Size = UDim2.new(1, -10, 1, -40)
-TScroll.Position = UDim2.new(0, 5, 0, 35)
-TScroll.BackgroundTransparency = 1
-local TLayout = Instance.new("UIListLayout", TScroll)
-TLayout.Padding = UDim.new(0, 5)
-
-local function UpdateTargets()
-    for _, item in pairs(TScroll:GetChildren()) do if item:IsA("TextButton") then item:Destroy() end end
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            local b = Instance.new("TextButton", TScroll)
-            b.Size = UDim2.new(1, -10, 0, 30)
-            b.Text = p.Name
-            b.BackgroundColor3 = table.find(_G.NebulaX_Core.TargetTable, p.Name) and Colors.Accent or Colors.ElementBG
-            b.TextColor3 = Colors.MainText
-            Instance.new("UICorner", b)
-            b.MouseButton1Click:Connect(function()
-                local idx = table.find(_G.NebulaX_Core.TargetTable, p.Name)
-                if idx then table.remove(_G.NebulaX_Core.TargetTable, idx) else table.insert(_G.NebulaX_Core.TargetTable, p.Name) end
-                UpdateTargets()
+local function PopulatePlayers()
+    for _, item in pairs(TargetScroll:GetChildren()) do if item:IsA("TextButton") then item:Destroy() end end
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local pBtn = Instance.new("TextButton", TargetScroll)
+            pBtn.Size = UDim2.new(1, -10, 0, 28); pBtn.Text = player.DisplayName
+            pBtn.BackgroundColor3 = table.find(_G.NebulaConfig.SelectedTargets, player.Name) and Colors.Accent or Colors.SidebarBG
+            pBtn.TextColor3 = Colors.Text; Instance.new("UICorner", pBtn)
+            pBtn.MouseButton1Click:Connect(function()
+                local find = table.find(_G.NebulaConfig.SelectedTargets, player.Name)
+                if find then table.remove(_G.NebulaConfig.SelectedTargets, find) else table.insert(_G.NebulaConfig.SelectedTargets, player.Name) end
+                PopulatePlayers()
             end)
         end
     end
 end
-UpdateTargets()
+PopulatePlayers(); Players.PlayerAdded:Connect(PopulatePlayers); Players.PlayerRemoving:Connect(PopulatePlayers)
 
-local GlueModeBtn = Instance.new("TextButton", CombatP)
-GlueModeBtn.Size = UDim2.new(1, -10, 0, 40)
-GlueModeBtn.Text = "Glue Mode: None"
-GlueModeBtn.BackgroundColor3 = Colors.ElementBG
-GlueModeBtn.TextColor3 = Colors.MainText
-Instance.new("UICorner", GlueModeBtn)
-
-GlueModeBtn.MouseButton1Click:Connect(function()
-    local list = {"None", "Classic", "Reverse", "Orbit"}
-    local cur = table.find(list, _G.NebulaX_Core.GlueState) or 1
-    _G.NebulaX_Core.GlueState = list[cur % #list + 1]
-    GlueModeBtn.Text = "Glue Mode: " .. _G.NebulaX_Core.GlueState
-end)
-
--- [[ SERVER BROWSER: SEARCHER ]]
-local SearchArea = Instance.new("Frame", ServerP)
-SearchArea.Size = UDim2.new(1, -10, 0, 60)
-SearchArea.BackgroundColor3 = Colors.ElementBG
-Instance.new("UICorner", SearchArea)
-
-local SearchInput = Instance.new("TextBox", SearchArea)
-SearchInput.Size = UDim2.new(1, -20, 0, 35)
-SearchInput.Position = UDim2.new(0, 10, 0, 12)
-SearchInput.PlaceholderText = "Search Player Name..."
-SearchInput.Text = ""
-SearchInput.BackgroundColor3 = Colors.Sidebar
-SearchInput.TextColor3 = Colors.MainText
-Instance.new("UICorner", SearchInput)
-
-local ServerList = Instance.new("ScrollingFrame", ServerP)
-ServerList.Size = UDim2.new(1, -10, 0, 250)
-ServerList.BackgroundTransparency = 1
-Instance.new("UIListLayout", ServerList).Padding = UDim.new(0, 5)
-
-local function FilterServer(txt)
-    for _, v in pairs(ServerList:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
-    for _, p in pairs(Players:GetPlayers()) do
-        if txt == "" or p.Name:lower():find(txt:lower()) then
-            local b = Instance.new("TextButton", ServerList)
-            b.Size = UDim2.new(1, -10, 0, 35)
-            b.Text = p.DisplayName .. " (@" .. p.Name .. ")"
-            b.BackgroundColor3 = Colors.ElementBG
-            b.TextColor3 = Colors.MainText
-            Instance.new("UICorner", b)
-        end
-    end
+-- [[ UNIVERSAL SERVER HOPPER (PLACE-AGNOSTIC) ]]
+local function ServerHop(targetUser)
+    local success, result = pcall(function()
+        local players = Players:GetPlayers()
+        -- Logic: Uses TeleportService to find valid instances without "Same Game" restrictions
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    end)
 end
-SearchInput:GetPropertyChangedSignal("Text"):Connect(function() FilterServer(SearchInput.Text) end)
-FilterServer("")
 
--- [[ SETTINGS: RAINBOW & EMOJI ]]
-local RainbowBtn = Instance.new("TextButton", SettingsP)
-RainbowBtn.Size = UDim2.new(1, -10, 0, 45)
-RainbowBtn.Text = "Rainbow UI: OFF"
-RainbowBtn.BackgroundColor3 = Colors.ElementBG
-RainbowBtn.TextColor3 = Colors.MainText
-Instance.new("UICorner", RainbowBtn)
+-- [[ UTILITY BUTTONS (THE 4 LITTLE THINGS) ]]
+local function NewToggle(txt, p, flag)
+    local b = Instance.new("TextButton", p)
+    b.Size = UDim2.new(1, -10, 0, 35); b.Text = txt; b.TextColor3 = Colors.Text
+    b.BackgroundColor3 = _G.NebulaConfig[flag] and Colors.Accent or Colors.ButtonNormal
+    Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(function()
+        _G.NebulaConfig[flag] = not _G.NebulaConfig[flag]
+        b.BackgroundColor3 = _G.NebulaConfig[flag] and Colors.Accent or Colors.ButtonNormal
+    end)
+end
 
-RainbowBtn.MouseButton1Click:Connect(function()
-    _G.NebulaX_Core.RainbowMode = not _G.NebulaX_Core.RainbowMode
-    RainbowBtn.Text = "Rainbow UI: " .. (_G.NebulaX_Core.RainbowMode and "ON" or "OFF")
-end)
+-- Tab Content
+NewToggle("Glue Desync (Jitter)", CombatTab, "GlueDesync")
+NewToggle("Orbit Velocity Lock", CombatTab, "VelocityLock")
+NewToggle("Phase (Noclip)", MoveTab, "Noclip")
+NewToggle("Infinite Jump", MoveTab, "InfJump")
 
-local EmojiInput = Instance.new("TextBox", SettingsP)
-EmojiInput.Size = UDim2.new(1, -10, 0, 45)
-EmojiInput.PlaceholderText = "Set Icon Emoji (e.g. 💀)"
-EmojiInput.BackgroundColor3 = Colors.ElementBG
-EmojiInput.TextColor3 = Colors.MainText
-Instance.new("UICorner", EmojiInput)
-
-EmojiInput.FocusLost:Connect(function()
-    if EmojiInput.Text ~= "" then
-        _G.NebulaX_Core.CurrentEmoji = EmojiInput.Text
-        MinIcon.Text = EmojiInput.Text
+-- [[ FPS BOOST & HOPPER ]]
+local BoostBtn = Instance.new("TextButton", UtilTab)
+BoostBtn.Size = UDim2.new(1, -10, 0, 35); BoostBtn.Text = "Execute FPS Boost"; BoostBtn.BackgroundColor3 = Colors.ButtonNormal; BoostBtn.TextColor3 = Colors.Text
+Instance.new("UICorner", BoostBtn)
+BoostBtn.MouseButton1Click:Connect(function()
+    settings().Rendering.QualityLevel = 1
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("Part") or v:IsA("MeshPart") then v.Material = Enum.Material.Plastic; v.Reflectance = 0
+        elseif v:IsA("Decal") then v.Transparency = 1 end
     end
+    Lighting.GlobalShadows = false
+    print("NebulaX: Boost Applied.")
 end)
 
--- [[ WINDOW CONTROLS ]]
-local CloseBtn = Instance.new("TextButton", MainFrame)
-CloseBtn.Size = UDim2.new(0, 35, 0, 35)
-CloseBtn.Position = UDim2.new(1, -45, 0, 10)
-CloseBtn.Text = "X"
-CloseBtn.BackgroundColor3 = Colors.CloseRed
-CloseBtn.TextColor3 = Colors.MainText
-Instance.new("UICorner", CloseBtn)
-CloseBtn.MouseButton1Click:Connect(function() NebulaX:Destroy() end)
+local HopBtn = Instance.new("TextButton", UtilTab)
+HopBtn.Size = UDim2.new(1, -10, 0, 35); HopBtn.Text = "Universal Server Hop"; HopBtn.BackgroundColor3 = Colors.ButtonNormal; HopBtn.TextColor3 = Colors.Text
+Instance.new("UICorner", HopBtn)
+HopBtn.MouseButton1Click:Connect(function() ServerHop() end)
 
-local MinBtn = Instance.new("TextButton", MainFrame)
-MinBtn.Size = UDim2.new(0, 35, 0, 35)
-MinBtn.Position = UDim2.new(1, -90, 0, 10)
-MinBtn.Text = "-"
-MinBtn.BackgroundColor3 = Colors.ElementBG
-MinBtn.TextColor3 = Colors.MainText
-Instance.new("UICorner", MinBtn)
-MinBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false MinIcon.Visible = true end)
-MinIcon.MouseButton1Click:Connect(function() MainFrame.Visible = true MinIcon.Visible = false end)
-
--- [[ MASTER ENGINE LOOPS ]]
+-- [[ HEARTBEAT LOOP ]]
 RunService.Heartbeat:Connect(function()
     local Char = LocalPlayer.Character
     local Root = Char and Char:FindFirstChild("HumanoidRootPart")
     if not Root then return end
 
-    -- Rainbow System
-    if _G.NebulaX_Core.RainbowMode then
-        local hue = tick() % 5 / 5
-        local clr = Color3.fromHSV(hue, 0.8, 1)
-        MainStroke.Color = clr
-        IconStroke.Color = clr
-        Logo.TextColor3 = clr
-        CreditName.TextColor3 = clr
+    -- Flight Logic
+    if _G.NebulaConfig.FlightEnabled then
+        Root.Velocity = Vector3.new(0, 0.1, 0)
+        local MoveDir = Char.Humanoid.MoveDirection
+        Root.CFrame = Root.CFrame + (MoveDir * (_G.NebulaConfig.FlightSpeed / 10))
     end
 
-    -- Combat: Glue Engine
-    if _G.NebulaX_Core.GlueState ~= "None" then
-        local foundTargets = {}
-        for _, n in pairs(_G.NebulaX_Core.TargetTable) do
-            local tp = Players:FindFirstChild(n)
-            if tp and tp.Character and tp.Character:FindFirstChild("HumanoidRootPart") then
-                table.insert(foundTargets, tp.Character.HumanoidRootPart)
-            end
+    -- Noclip Path
+    if _G.NebulaConfig.Noclip then
+        for _, part in pairs(Char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
+    end
 
-        for i, targetRoot in ipairs(foundTargets) do
-            targetRoot.Velocity = Vector3.zero
-            if _G.NebulaX_Core.GlueState == "Classic" then
-                targetRoot.CFrame = Root.CFrame * CFrame.new(0, _G.NebulaX_Core.HeightOffset, -(i * 7))
-            elseif _G.NebulaX_Core.GlueState == "Reverse" then
-                Root.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 5)
-            elseif _G.NebulaX_Core.GlueState == "Orbit" then
-                local ang = (tick() * _G.NebulaX_Core.OrbitSpeed) + (i * (math.pi * 2 / #foundTargets))
-                targetRoot.CFrame = Root.CFrame * CFrame.Angles(0, ang, 0) * CFrame.new(0, _G.NebulaX_Core.HeightOffset, _G.NebulaX_Core.OrbitRadius)
+    -- Glue Path
+    if #_G.NebulaConfig.SelectedTargets > 0 then
+        for i, name in ipairs(_G.NebulaConfig.SelectedTargets) do
+            local TPlr = Players:FindFirstChild(name)
+            if TPlr and TPlr.Character and TPlr.Character:FindFirstChild("HumanoidRootPart") then
+                local TRoot = TPlr.Character.HumanoidRootPart
+                if _G.NebulaConfig.VelocityLock then TRoot.Velocity = Vector3.zero end
+                
+                local Angle = (tick() * _G.NebulaConfig.OrbitSpeed) + (i * (math.pi * 2 / #_G.NebulaConfig.SelectedTargets))
+                local Jitter = _G.NebulaConfig.GlueDesync and math.random(-1,1) or 0
+                local Offset = Vector3.new(math.cos(Angle) * (_G.NebulaConfig.OrbitRadius + Jitter), _G.NebulaConfig.GlueHeight, math.sin(Angle) * (_G.NebulaConfig.OrbitRadius + Jitter))
+                TRoot.CFrame = CFrame.new(Root.Position + Offset)
             end
         end
     end
 end)
+
+print("NEBULAX v5.5: Terminal Online.")
