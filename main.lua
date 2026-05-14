@@ -146,3 +146,84 @@ No.Text, No.BackgroundColor3 = "No", Color3.fromRGB(150, 0, 0)
 No.MouseButton1Click:Connect(function() Prompt.Visible = false end)
 
 Close.MouseButton1Click:Connect(function() Prompt.Visible = true end)
+
+
+
+
+local R = game:GetService("RunService")
+
+_G.GlueData = {
+    Mode = "None",
+    Ignore = {"FROM_THE_FOUNTAIN", "Rig", "Model", "Bone"}
+}
+
+local farmPage = _G.Pages["Items/Farming"]
+
+local GlueMain = Instance.new("Frame", farmPage)
+GlueMain.Size = UDim2.new(1, -10, 0, 50)
+GlueMain.BackgroundColor3 = Color3.fromRGB(25, 20, 45)
+Instance.new("UICorner", GlueMain)
+
+local OpenBtn = Instance.new("TextButton", GlueMain)
+OpenBtn.Size = UDim2.new(1, 0, 1, 0)
+OpenBtn.Text = "GALACTIC GLUE MENU >"
+OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenBtn.BackgroundTransparency = 1
+OpenBtn.Font = Enum.Font.GothamBold
+
+local OptionFolder = Instance.new("Frame", farmPage)
+OptionFolder.Size = UDim2.new(1, -10, 0, 120)
+OptionFolder.BackgroundColor3 = Color3.fromRGB(15, 10, 25)
+OptionFolder.Visible = false
+Instance.new("UIListLayout", OptionFolder).Padding = UDim.new(0, 5)
+
+OpenBtn.MouseButton1Click:Connect(function() OptionFolder.Visible = not OptionFolder.Visible end)
+
+local function AddMode(txt, mode)
+    local b = Instance.new("TextButton", OptionFolder)
+    b.Size = UDim2.new(1, 0, 0, 35)
+    b.Text = txt
+    b.BackgroundColor3 = Color3.fromRGB(30, 20, 50)
+    b.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", b)
+    
+    b.MouseButton1Click:Connect(function()
+        _G.GlueData.Mode = (_G.GlueData.Mode == mode) and "None" or mode
+        print("Glue Mode set to: " .. _G.GlueData.Mode)
+    end)
+end
+
+AddMode("Classic (Enemy -> You)", "Classic")
+AddMode("Reverse (You -> Enemy)", "Reverse")
+AddMode("Disable All Glue", "None")
+
+R.Heartbeat:Connect(function()
+    if _G.GlueData.Mode == "None" then return end
+    local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local target, dist = nil, math.huge
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Model") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v ~= lp.Character then
+            local ignored = false
+            for _, n in pairs(_G.GlueData.Ignore) do if v.Name:find(n) then ignored = true end end
+            if not ignored then
+                local th = v:FindFirstChild("HumanoidRootPart")
+                if th then
+                    local d = (hrp.Position - th.Position).Magnitude
+                    if d < dist then dist = d target = th end
+                end
+            end
+        end
+    end
+
+    if target then
+        target.Velocity, target.RotVelocity = Vector3.zero, Vector3.zero
+        if _G.GlueData.Mode == "Classic" then
+            target.CanCollide = false
+            target.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
+        elseif _G.GlueData.Mode == "Reverse" then
+            hrp.CFrame = target.CFrame * CFrame.new(0, 0, 2)
+        end
+    end
+end)
