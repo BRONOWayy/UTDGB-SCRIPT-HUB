@@ -41,7 +41,7 @@ local function createTabFrame(name)
    Scroll.Size = UDim2.new(1, 0, 1, 0)
    Scroll.BackgroundTransparency = 1
    Scroll.BorderSizePixel = 0
-   Scroll.CanvasSize = UDim2.new(0, 0, 0, 1500) -- Massive canvas size to auto-scroll through all listed game items
+   Scroll.CanvasSize = UDim2.new(0, 0, 0, 1500) -- High canvas size to hold full scrolling item dumps
    Scroll.ScrollBarThickness = 6
    Scroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 125)
    Scroll.Visible = false
@@ -56,13 +56,10 @@ local function createTabFrame(name)
    return Scroll
 end
 
-local StatsScroll = createTabFrame("Stats")
-local WeaponsScroll = createTabFrame("Weapons")
-local ArmorScroll = createTabFrame("Armor")
-local ItemsScroll = createTabFrame("Items")
+local MasterScroll = createTabFrame("Master Injector")
 
 -- ============================================================================
--- 👋 100% FIXED DRAG HANDLER (TOUCH AND MOUSE REPOSITIONING)
+-- 👋 SMOOTH TOUCH DRAG ENGINE
 -- ============================================================================
 local UserInputService = game:GetService("UserInputService")
 local dragging, dragInput, dragStart, startPos
@@ -90,27 +87,10 @@ UserInputService.InputChanged:Connect(function(input)
    end
 end)
 
--- ============================================================================
--- ⚙️ GENERATION ELEMENT TEMPLATES
--- ============================================================================
-local function addInputBox(parentScroll, placeholderText)
-   local box = Instance.new("TextBox")
-   box.Size = UDim2.new(1, -10, 0, 35)
-   box.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-   box.TextColor3 = Color3.fromRGB(255, 255, 255)
-   box.PlaceholderText = placeholderText
-   box.Text = ""
-   box.Font = Enum.Font.SourceSans
-   box.TextSize = 14
-   box.BorderSizePixel = 1
-   box.BorderColor3 = Color3.fromRGB(60, 60, 65)
-   box.Parent = parentScroll
-   return box
-end
-
+-- Helper design utility
 local function addActionButton(parentScroll, text, color, callback)
    local btn = Instance.new("TextButton")
-   btn.Size = UDim2.new(1, -10, 0, 35)
+   btn.Size = UDim2.new(1, -10, 0, 40)
    btn.BackgroundColor3 = color or Color3.fromRGB(50, 50, 55)
    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
    btn.Text = text
@@ -121,49 +101,54 @@ local function addActionButton(parentScroll, text, color, callback)
    btn.MouseButton1Click:Connect(callback)
 end
 
-local function showTab(tabName)
-   for name, frame in pairs(TabFrames) do frame.Visible = (name == tabName) end
-end
+-- ============================================================================
+-- 🔥 CORE EXPLOIT: BULK LOOT AUTO-INJECTOR ENGINE
+-- ============================================================================
 
--- ============================================================================
--- 📊 TAB 1: STATS ENGINE (PERMANENT)
--- ============================================================================
-local goldInput = addInputBox(StatsScroll, "Enter Permanent Gold Value...")
-addActionButton(StatsScroll, "SET GAME GOLD", Color3.fromRGB(218, 165, 32), function()
-   local amt = tonumber(goldInput.Text) or 10000
-   if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveStat") then
-      game.ReplicatedStorage.SendServer.GiveStat:FireServer("Gold", amt)
-   end
+-- MASTER MASSIVE DROP BUTTON (Attempts to inject everything simultaneously)
+addActionButton(MasterScroll, "💥 INJECT ALL GAME ASSETS NOW 💥", Color3.fromRGB(180, 40, 40), function()
+   task.spawn(function()
+      local folders = {"Items", "Weapons", "Armor", "Cards"}
+      for _, fName in pairs(folders) do
+         local folder = game.ReplicatedStorage:FindFirstChild(fName)
+         if folder then
+            for _, asset in pairs(folder:GetChildren()) do
+               -- Fire using GiveThing master node
+               if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveThing") then
+                  game.ReplicatedStorage.SendServer.GiveThing:FireServer(asset, 99)
+               end
+               -- Fire using GiveStat master node
+               if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveStat") then
+                  game.ReplicatedStorage.SendServer.GiveStat:FireServer(asset.Name, 99)
+               end
+               task.wait(0.01)
+            end
+         end
+      end
+   end)
 end)
 
-local loveInput = addInputBox(StatsScroll, "Enter Permanent Love (LV)...")
-addActionButton(StatsScroll, "SET GAME LOVE LEVEL", Color3.fromRGB(199, 21, 133), function()
-   local amt = tonumber(loveInput.Text) or 20
-   if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveStat") then
-      game.ReplicatedStorage.SendServer.GiveStat:FireServer("Love", amt)
-   end
-end)
-
--- ============================================================================
--- ⚔️ TAB 2 & 3 & 4: DYNAMIC LIST SCANNERS (BUILDS EVERY ASSET SELECTION AUTOMATICALLY)
--- ============================================================================
-local globalQuantityInput = addInputBox(ItemsScroll, "Set Give Item Quantity Stack...")
-
-local function populateListTab(parentScroll, storageFolderName, remoteName)
-   local folder = game.ReplicatedStorage:FindFirstChild(storageFolderName)
-   if folder then
-      for _, child in pairs(folder:GetChildren()) do
-         -- Generates an individual listing button labeled directly by the object name inside ReplicatedStorage
-         addActionButton(parentScroll, "Spawn: " .. child.Name, Color3.fromRGB(45, 45, 50), function()
-            local remote = game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild(remoteName)
-            if remote then
-               if remoteName == "GiveThing" then
-                  local qty = tonumber(globalQuantityInput.Text) or 1
-                  -- Safely passes the real asset file reference found by the list scraper
-                  remote:FireServer(child, qty)
-               else
-                  -- Standard BuyWeapon / BuyArmor exploit execution route (0 cost pass)
-                  remote:FireServer(child, 0)
+-- DYNAMIC SCROLLWHEEL DUMP LOGIC (Lists out every item individually)
+local foldersToScan = {"Items", "Weapons", "Armor", "Cards"}
+for _, fName in pairs(foldersToScan) do
+   local targetFolder = game.ReplicatedStorage:FindFirstChild(fName)
+   if targetFolder then
+      for _, child in pairs(targetFolder:GetChildren()) do
+         addActionButton(MasterScroll, "Force Spawn: " .. child.Name .. " ["..fName.."]", Color3.fromRGB(45, 45, 50), function()
+            -- 1. Try working GiveThing parameter rule
+            if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveThing") then
+               game.ReplicatedStorage.SendServer.GiveThing:FireServer(child, 99)
+            end
+            
+            -- 2. Try secondary GiveStat string bypass
+            if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveStat") then
+               game.ReplicatedStorage.SendServer.GiveStat:FireServer(child.Name, 99)
+            end
+            
+            -- 3. Try direct item events if it is a booster/token (Matches your star log)
+            if game.ReplicatedStorage:FindFirstChild("ItemEvents") and game.ReplicatedStorage.ItemEvents:FindFirstChild(child.Name) then
+               for i = 1, 10 do
+                  game.ReplicatedStorage.ItemEvents[child.Name]:FireServer()
                end
             end
          end)
@@ -171,42 +156,18 @@ local function populateListTab(parentScroll, storageFolderName, remoteName)
    end
 end
 
--- Instantly processes and displays the entire directory listings right on your scrollwheel windows
-populateListTab(WeaponsScroll, "Weapons", "BuyWeapon")
-populateListTab(WeaponsScroll, "Cards", "BuyCard")
-populateListTab(ArmorScroll, "Armor", "BuyArmor")
-populateListTab(ItemsScroll, "Items", "GiveThing")
-
--- Adds standard structural utility buttons at the top of listings
-addActionButton(WeaponsScroll, "⚡ INSTANT MAX LEVEL EQUIPPED WEAPON ⚡", Color3.fromRGB(70, 130, 180), function()
-   if game.ReplicatedStorage:FindFirstChild("RequestToLevelGear") then
-      for i = 1, 20 do game.ReplicatedStorage.RequestToLevelGear:FireServer() task.wait(0.02) end
-   end
-end)
-
-addActionButton(ArmorScroll, "⚡ INSTANT MAX LEVEL EQUIPPED ARMOR ⚡", Color3.fromRGB(70, 130, 180), function()
-   if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("UpgradeArmor") then
-      for i = 1, 20 do game.ReplicatedStorage.SendServer.UpgradeArmor:FireServer() task.wait(0.02) end
-   end
-end)
-
 -- ============================================================================
--- 🗂️ SIDEBAR SELECTION SYSTEM
+-- 🗂️ SINGLE MASTER SIDEBAR RENDER
 -- ============================================================================
-local tabs = {"Stats", "Weapons", "Armor", "Items"}
-for i, name in pairs(tabs) do
-   local tabBtn = Instance.new("TextButton")
-   tabBtn.Size = UDim2.new(1, -10, 0, 40)
-   tabBtn.Position = UDim2.new(0, 5, 0, (i-1) * 45 + 10)
-   tabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-   tabBtn.TextColor3 = Color3.fromRGB(245, 245, 245)
-   tabBtn.Text = name
-   tabBtn.Font = Enum.Font.SourceSansBold
-   tabBtn.TextSize = 14
-   tabBtn.BorderSizePixel = 0
-   tabBtn.Parent = Nav
-   
-   tabBtn.MouseButton1Click:Connect(function() showTab(name) end)
-end
+local tabBtn = Instance.new("TextButton")
+tabBtn.Size = UDim2.new(1, -10, 0, 40)
+tabBtn.Position = UDim2.new(0, 5, 0, 10)
+tabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+tabBtn.Text = "All Items"
+tabBtn.Font = Enum.Font.SourceSansBold
+tabBtn.TextSize = 14
+tabBtn.BorderSizePixel = 0
+tabBtn.Parent = Nav
 
-showTab("Stats")
+MasterScroll.Visible = true
