@@ -3,6 +3,10 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 
 if PlayerGui:FindFirstChild("DeltaCustomUI") then PlayerGui.DeltaCustomUI:Destroy() end
 
+local function getStatsFolder()
+   return LP:FindFirstChild("PlayerStats") or (LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head:FindFirstChild("PlayerStats"))
+end
+
 -- ==========================================
 -- 🛠️ BASE NATIVE GUI ENGINE
 -- ==========================================
@@ -61,7 +65,7 @@ local ArmorScroll = createTabFrame("Armor")
 local ItemsScroll = createTabFrame("Items")
 
 -- ==========================================
--- 👋 DRAG HANDLER
+-- 👋 CUSTOM DRAG ENGINE
 -- ==========================================
 local UserInputService = game:GetService("UserInputService")
 local dragging, dragInput, dragStart, startPos
@@ -87,7 +91,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- ==========================================
--- 🛠️ ELEMENT BUILDERS
+-- 🛠️ INPUT BOX & BUTTON BUILDERS
 -- ==========================================
 local function addInputBox(parentScroll, placeholderText)
    local box = Instance.new("TextBox")
@@ -122,92 +126,110 @@ local function showTab(tabName)
 end
 
 -- ==========================================
--- 📊 TAB 1: SERVER LOVE & EXP FARM
+-- 📊 TAB 1: STATS & SHOP INJECTIONS
 -- ==========================================
-local loveLoopInput = addInputBox(StatsScroll, "How many levels to farm? (e.g. 50)")
-addButton(StatsScroll, "SERVER-SIDE LOVE FARM", function()
-   local loops = tonumber(loveLoopInput.Text) or 10
-   -- Scans for consumables that award XP or levels and triggers them server-side
-   local items = game.ReplicatedStorage:FindFirstChild("Items")
-   if items and game.ReplicatedStorage:FindFirstChild("ItemEvents") then
-      for _, item in pairs(items:GetChildren()) do
-         local name = string.lower(item.Name)
-         if name:find("love") or name:find("xp") or name:find("level") or name:find("candy") then
-            local remote = game.ReplicatedStorage.ItemEvents:FindFirstChild(item.Name)
-            if remote then
-               for i = 1, loops do
-                  remote:FireServer()
-                  task.wait(0.05)
-               end
-            end
+local loveInput = addInputBox(StatsScroll, "How many times to invoke level up via Shop?")
+addButton(StatsScroll, "GIVE LOVE (SERVER-SIDE via SHOP)", function()
+   local loops = tonumber(loveInput.Text) or 5
+   -- Exploits the Roblox Shop GUI frame configuration hooks shown in your explorer
+   local shopRemote = game.ReplicatedStorage:FindFirstChild("ShopEvent") or game.ReplicatedStorage:FindFirstChild("RobloxShopRemote")
+   if shopRemote then
+      for i = 1, loops do
+         shopRemote:FireServer("BuyItem", "LoveXP")
+         task.wait(0.1)
+      end
+   else
+      -- Fallback to look inside your explicit folder path found in the image
+      local shopFrame = LP.PlayerGui:CustomFind("OpenRobloxShop", true)
+      if shopFrame and shopFrame:FindFirstChild("RemoteEvent") then
+         for i = 1, loops do shopFrame.RemoteEvent:FireServer() end
+      end
+   end
+end)
+
+local goldInput = addInputBox(StatsScroll, "Enter loop multi for Gold injection...")
+addButton(StatsScroll, "GIVE GOLD (SERVER-SIDE)", function()
+   local loops = tonumber(goldInput.Text) or 10
+   for i = 1, loops do
+      -- Triggers your exact armor sell events sequentially to force cash credit directly
+      local armor = LP:FindFirstChild("Armor")
+      if armor and #armor:GetChildren() > 0 then
+         game.ReplicatedStorage.SendServer.Sell:FireServer(armor:GetChildren()[1], "Armor")
+      end
+      task.wait(0.05)
+   end
+end)
+
+-- ==========================================
+-- ⚔️ TAB 2: WEAPONS
+-- ==========================================
+local weaponLvlInput = addInputBox(WeaponsScroll, "Set weapon value tier...")
+addButton(WeaponsScroll, "Give All Weapons", function()
+   local lvl = tonumber(weaponLvlInput.Text) or 1
+   local target = LP:FindFirstChild("Weapons") or LP:FindFirstChild("Items")
+   local storage = game.ReplicatedStorage:FindFirstChild("Items") or game.ReplicatedStorage:FindFirstChild("Weapons")
+   if target and storage then
+      for _, obj in pairs(storage:GetChildren()) do
+         if not target:FindFirstChild(obj.Name) then
+            local clone = Instance.new("Folder")
+            clone.Name, clone.Parent = obj.Name, target
+            local v = Instance.new("IntValue", clone)
+            v.Name, v.Value = "Level", lvl
          end
       end
    end
 end)
 
 -- ==========================================
--- ⚔️ TAB 2: WEAPONS & SERVER GOLD SPAM
+-- 🛡️ TAB 3: ARMOR
 -- ==========================================
-local goldLoopInput = addInputBox(WeaponsScroll, "How many times to spam sell? (e.g. 100)")
-addButton(WeaponsScroll, "SERVER-SIDE GOLD GLITCH (CARDS)", function()
-   local loops = tonumber(goldLoopInput.Text) or 10
-   local storage = game.ReplicatedStorage:FindFirstChild("Cards")
-   if storage and #storage:GetChildren() > 0 then
-      -- Pick the first available card asset from the game files
-      local baseItem = storage:GetChildren()[1]
-      
-      -- Creates a dummy object token to trick the remote parameters
-      local dummy = Instance.new("Folder")
-      dummy.Name = baseItem.Name
-      
-      for i = 1, loops do
-         -- Fires the sell event repeatedly using the spoofed object asset
-         game.ReplicatedStorage.SendServer.Sell:FireServer(dummy, "Cards")
-         task.wait(0.02)
-      end
-   end
-end)
-
--- ==========================================
--- 🛡️ TAB 3: ARMOR & SERVER GOLD SPAM
--- ==========================================
-local armorGoldInput = addInputBox(ArmorScroll, "How many times to spam sell armor?")
-addButton(ArmorScroll, "SERVER-SIDE GOLD GLITCH (ARMOR)", function()
-   local loops = tonumber(armorGoldInput.Text) or 10
+local armorLvlInput = addInputBox(ArmorScroll, "Set armor value tier...")
+addButton(ArmorScroll, "Give All Armor Types", function()
+   local lvl = tonumber(armorLvlInput.Text) or 1
+   local target = LP:FindFirstChild("Armor")
    local storage = game.ReplicatedStorage:FindFirstChild("Armor")
-   if storage and #storage:GetChildren() > 0 then
-      local baseItem = storage:GetChildren()[1]
-      local dummy = Instance.new("Folder")
-      dummy.Name = baseItem.Name
-      
-      for i = 1, loops do
-         game.ReplicatedStorage.SendServer.Sell:FireServer(dummy, "Armor")
-         task.wait(0.02)
-      end
-   end
-end)
-
--- ==========================================
--- 🧪 TAB 4: REAL ITEM EVENT USE
--- ==========================================
-local itemUseInput = addInputBox(ItemsScroll, "How many times to trigger item use remote?")
-addButton(ItemsScroll, "FORCE TRIGGER ALL ITEM EVENTS", function()
-   local loops = tonumber(itemUseInput.Text) or 5
-   local events = game.ReplicatedStorage:FindFirstChild("ItemEvents")
-   if events then
-      for _, remote in pairs(events:GetChildren()) do
-         if remote:IsA("RemoteEvent") then
-            for i = 1, loops do
-               remote:FireServer()
-               task.wait(0.02)
-            end
+   if target and storage then
+      for _, obj in pairs(storage:GetChildren()) do
+         if not target:FindFirstChild(obj.Name) then
+            local clone = Instance.new("Folder")
+            clone.Name, clone.Parent = obj.Name, target
+            local v = Instance.new("IntValue", clone)
+            v.Name, v.Value = "Level", lvl
          end
       end
    end
 end)
 
 -- ==========================================
--- 🗂️ RENDER TABS
+-- 🧪 TAB 4: ITEMS & TICKET EXPLOITS
+-- ==========================================
+local itemAmountInput = addInputBox(ItemsScroll, "How many times to loop claim tickets?")
+addButton(ItemsScroll, "GIVE TICKETS & ITEMS (SERVER)", function()
+   local loops = tonumber(itemAmountInput.Text) or 10
+   -- Custom check targeting the "CreateDungeon" and reward triggers from your Explorer panel
+   local dungeonRemote = game.ReplicatedStorage:FindFirstChild("CreateDungeon") or game.ReplicatedStorage:FindFirstChild("ClaimReward")
+   if dungeonRemote and dungeonRemote:IsA("RemoteEvent") then
+      for i = 1, loops do
+         dungeonRemote:FireServer("Complete", "RewardTicket")
+         task.wait(0.1)
+      end
+   end
+end)
+
+-- Helper recursive finder function to map hidden UI configurations 
+function LP.PlayerGui.CustomFind(self, name, recursive)
+   for _, v in pairs(self:GetChildren()) do
+      if v.Name == name then return v end
+      if recursive then
+         local found = v:CustomFind(name, true)
+         if found then return found end
+      end
+   end
+   return nil
+end
+
+-- ==========================================
+-- 🗂️ RENDER NAVIGATION TABS
 -- ==========================================
 local tabs = {"Stats", "Weapons", "Armor", "Items"}
 for i, name in pairs(tabs) do
