@@ -4,8 +4,18 @@ task.wait(0.5)
 local PlayerGui = LP:WaitForChild("PlayerGui", 15)
 if PlayerGui:FindFirstChild("DeltaMasterUI") then PlayerGui.DeltaMasterUI:Destroy() end
 
+-- Helper function to find real item instances inside game storage instead of text strings
+local function findStorageObject(folderName, objectName)
+   local folder = game.ReplicatedStorage:FindFirstChild(folderName)
+   if folder then
+      -- Finds the actual object reference inside the game's assets
+      return folder:FindFirstChild(objectName)
+   end
+   return nil
+end
+
 -- ============================================================================
--- 🛠️ CORE NATIVE ENGINE BYPASS
+-- 🛠️ BASE NATIVE GUI ENGINE
 -- ============================================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DeltaMasterUI"
@@ -41,7 +51,7 @@ local function createTabFrame(name)
    Scroll.Size = UDim2.new(1, 0, 1, 0)
    Scroll.BackgroundTransparency = 1
    Scroll.BorderSizePixel = 0
-   Scroll.CanvasSize = UDim2.new(0, 0, 0, 550) -- Standard scroll wheel capacity
+   Scroll.CanvasSize = UDim2.new(0, 0, 0, 550) -- Dedicated scroll wheel capability
    Scroll.ScrollBarThickness = 6
    Scroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 125)
    Scroll.Visible = false
@@ -123,95 +133,75 @@ local function showTab(tabName)
 end
 
 -- ============================================================================
--- 📊 TAB 1: SERVER-SIDE STATS & GOLD (REMOTES CONNECTED)
+-- 📊 TAB 1: SERVER-SIDE STATS & GOLD (PROPER INSTANCE ARGUMENTS)
 -- ============================================================================
 local goldInput = addInputBox(StatsScroll, "Enter Permanent Gold Amount...")
-addButton(StatsScroll, "GIVE REAL GOLD (SERVER)", function()
+addButton(StatsScroll, "GIVE SERVER GOLD", function()
    local amt = tonumber(goldInput.Text) or 10000
    if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveStat") then
+      -- Passes the target name alongside the value argument directly
       game.ReplicatedStorage.SendServer.GiveStat:FireServer("Gold", amt)
    end
 end)
 
 local loveInput = addInputBox(StatsScroll, "Enter Permanent Love (LV) Level...")
-addButton(StatsScroll, "GIVE REAL LOVE LEVELS (SERVER)", function()
+addButton(StatsScroll, "GIVE SERVER LOVE LEVELS", function()
    local amt = tonumber(loveInput.Text) or 20
    if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveStat") then
       game.ReplicatedStorage.SendServer.GiveStat:FireServer("Love", amt)
    end
 end)
 
-local xpInput = addInputBox(StatsScroll, "Enter Permanent XP Amount...")
-addButton(StatsScroll, "GIVE REAL XP (SERVER)", function()
-   local amt = tonumber(xpInput.Text) or 500
-   if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveStat") then
-      game.ReplicatedStorage.SendServer.GiveStat:FireServer("XP", amt)
-   end
-end)
-
 -- ============================================================================
--- ⚔️ TAB 2: WEAPONS & CARDS 
+-- ⚔️ TAB 2: WEAPONS & CARDS (OBJECT INJECTIONS)
 -- ============================================================================
-local weaponNameInput = addInputBox(WeaponsScroll, "Enter Weapon Asset Name...")
-addButton(WeaponsScroll, "FORCE UNLOCK WEAPON", function()
+local weaponNameInput = addInputBox(WeaponsScroll, "Enter Weapon Name (e.g., Toy Knife)...")
+addButton(WeaponsScroll, "FORCE UNLOCK WEAPON (SERVER)", function()
    local wName = weaponNameInput.Text
-   if wName ~= "" and game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("BuyWeapon") then
-      game.ReplicatedStorage.SendServer.BuyWeapon:FireServer(wName, 0)
+   local targetObj = findStorageObject("Items", wName) or findStorageObject("Weapons", wName)
+   
+   if targetObj and game.ReplicatedStorage.SendServer:FindFirstChild("BuyWeapon") then
+      -- CRITICAL FIX: Passes the real Object Instance instead of an invalid text string
+      game.ReplicatedStorage.SendServer.BuyWeapon:FireServer(targetObj, 0)
    end
 end)
 
-local cardNameInput = addInputBox(WeaponsScroll, "Enter Card/Spell Asset Name...")
+local cardNameInput = addInputBox(WeaponsScroll, "Enter Card Name...")
 addButton(WeaponsScroll, "FORCE UNLOCK CARD / SPELL", function()
    local cName = cardNameInput.Text
-   if cName ~= "" and game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("BuyCard") then
-      game.ReplicatedStorage.SendServer.BuyCard:FireServer(cName, 0)
-   end
-end)
-
-local gearLoopInput = addInputBox(WeaponsScroll, "How many times to level up current gear?")
-addButton(WeaponsScroll, "MAX LEVEL EQUIPPED WEAPON", function()
-   local loops = tonumber(gearLoopInput.Text) or 20
-   if game.ReplicatedStorage:FindFirstChild("RequestToLevelGear") then
-      for i = 1, loops do
-         game.ReplicatedStorage.RequestToLevelGear:FireServer()
-         task.wait(0.02)
-      end
+   local targetObj = findStorageObject("Cards", cName)
+   
+   if targetObj and game.ReplicatedStorage.SendServer:FindFirstChild("BuyCard") then
+      game.ReplicatedStorage.SendServer.BuyCard:FireServer(targetObj, 0)
    end
 end)
 
 -- ============================================================================
 -- 🛡️ TAB 3: ARMOR
 -- ============================================================================
-local armorNameInput = addInputBox(ArmorScroll, "Enter Armor Asset Name...")
-addButton(ArmorScroll, "FORCE UNLOCK ARMOR", function()
+local armorNameInput = addInputBox(ArmorScroll, "Enter Armor Name (e.g., Locket)...")
+addButton(ArmorScroll, "FORCE UNLOCK ARMOR (SERVER)", function()
    local aName = armorNameInput.Text
-   if aName ~= "" and game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("BuyArmor") then
-      game.ReplicatedStorage.SendServer.BuyArmor:FireServer(aName, 0)
-   end
-end)
-
-local armorLoopInput = addInputBox(ArmorScroll, "How many times to upgrade armor?")
-addButton(ArmorScroll, "MAX LEVEL EQUIPPED ARMOR", function()
-   local loops = tonumber(armorLoopInput.Text) or 20
-   if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer.BuyArmor:FindFirstChild("UpgradeArmor") then
-      for i = 1, loops do
-         game.ReplicatedStorage.SendServer.UpgradeArmor:FireServer()
-         task.wait(0.02)
-      end
+   local targetObj = findStorageObject("Armor", aName)
+   
+   if targetObj and game.ReplicatedStorage.SendServer:FindFirstChild("BuyArmor") then
+      game.ReplicatedStorage.SendServer.BuyArmor:FireServer(targetObj, 0)
    end
 end)
 
 -- ============================================================================
--- 🧪 TAB 4: PERMANENT ITEMS GIVER (GIVETHING NODE CONNECTED!)
+-- 🧪 TAB 4: ITEMS & TICKETS (REAL GIVETHING INJECTION)
 -- ============================================================================
-local itemInput = addInputBox(ItemsScroll, "Enter Ticket or Consumable Name...")
-local itemAmtInput = addInputBox(ItemsScroll, "Enter Stack Size Quantity...")
+local itemInput = addInputBox(ItemsScroll, "Enter Item or Ticket Name...")
+local itemAmtInput = addInputBox(ItemsScroll, "Enter Quantity Amount...")
 addButton(ItemsScroll, "GIVE REAL PERMANENT ITEM", function()
    local itemName = itemInput.Text
    local amt = tonumber(itemAmtInput.Text) or 1
-   if itemName ~= "" and game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveThing") then
-      -- Bypasses inventory logic to inject items directly server-side
-      game.ReplicatedStorage.SendServer.GiveThing:FireServer(itemName, amt)
+   local targetObj = findStorageObject("Items", itemName)
+   
+   if targetObj and game.ReplicatedStorage.SendServer:FindFirstChild("GiveThing") then
+      -- Correctly matches properties structure: passes the asset model and stack count
+      game.ReplicatedStorage.SendServer.GiveThing:FireServer(targetObj, amt)
    end
 end)
 
