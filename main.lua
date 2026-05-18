@@ -1,65 +1,75 @@
+-- Modern UI Library for Delta Executor
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Network Tester | Delta",
-    SubTitle = "Server-Side Verification",
+    Title = "Item Master | Step 1",
+    SubTitle = "Delta Engine",
     TabWidth = 160,
-    Size = UDim2.fromOffset(450, 320),
+    Size = UDim2.fromOffset(450, 300),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 local Tabs = {
-    Test = Window:AddTab({ Title = "Remote Tester", Icon = "rbxassetid://4483345906" })
+    Items = Window:AddTab({ Title = "Item Spawner", Icon = "rbxassetid://4483345906" })
 }
 
+local Player = game.Players.LocalPlayer
+local PlayerItemsFolder = Player:WaitForChild("Items", 10)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ItemEvents = ReplicatedStorage:FindFirstChild("ItemEvents")
 
--- Helper function to test different ways a server likes to receive instructions
-local function TestRemoteFormat(remoteName)
-    local remote = ItemEvents and ItemEvents:FindFirstChild(remoteName)
-    if not remote or not remote:IsA("RemoteEvent") then
-        Fluent:Notify({ Title = "Error", Content = remoteName .. " event not found!", Duration = 3 })
-        return
-    end
-
-    -- Format 1: Pass the name of the item as text
-    remote:FireServer(remoteName)
-    
-    -- Format 2: Pass a quantity number
-    remote:FireServer(10)
-    
-    -- Format 3: Pass both item name and a quantity amount
-    remote:FireServer(remoteName, 10)
-    
-    -- Format 4: Pass a boolean validation flag
-    remote:FireServer(true)
-
-    Fluent:Notify({ 
-        Title = "Packets Sent", 
-        Content = "Dispatched multiple parameter formats for: " .. remoteName, 
-        Duration = 4 
-    })
-end
-
--- BUTTON 1: Test specifically with the Token of LOVE (The Ticket)
-Tabs.Test:AddButton({
-    Title = "Test 'Token of LOVE' Server Giving",
-    Description = "Sends 4 distinct data types to force a server reply",
+Tabs.Items:AddButton({
+    Title = "Give All Real Items & Tickets",
+    Description = "Safely fills your slots and hooks server functions",
     Callback = function()
-        TestRemoteFormat("Token of LOVE")
+        local ItemsStorage = ReplicatedStorage:FindFirstChild("Items")
+        
+        if not ItemsStorage then
+            Fluent:Notify({ Title = "Error", Content = "Missing master 'Items' folder in ReplicatedStorage!", Duration = 3 })
+            return
+        end
+
+        local count = 0
+
+        -- 1. CLEAN UP THE CRASHING FOLDER INSIDE YOUR INVENTORY FIRST
+        -- If 'KeyItem' exists as a raw folder, we delete it so line 55 of HandleItems doesn't break
+        if PlayerItemsFolder then
+            local brokenKeyItem = PlayerItemsFolder:FindFirstChild("KeyItem")
+            if brokenKeyItem and brokenKeyItem:IsA("Folder") then
+                brokenKeyItem:Destroy()
+            end
+        end
+
+        -- 2. SPAWN EVERY ITEM MATCHING THE EXACT VALUES THE GAME LOGIC EXPECTS
+        for _, itemTemplate in pairs(ItemsStorage:GetChildren()) do
+            local itemName = itemTemplate.Name
+
+            if PlayerItemsFolder then
+                local existing = PlayerItemsFolder:FindFirstChild(itemName)
+                
+                if not existing then
+                    -- Create an IntValue so OwnWeapon.Value works perfectly on line 55!
+                    local itemValue = Instance.new("IntValue")
+                    itemValue.Name = itemName
+                    itemValue.Value = 5 -- Give yourself 5 copies of everything (Tickets, Potions, Boosters)
+                    itemValue.Parent = PlayerItemsFolder
+                    count = count + 1
+                else
+                    -- If it's already there, just replenish the count
+                    if existing:IsA("ValueBase") then
+                        existing.Value = 5
+                    end
+                end
+            end
+        end
+
+        Fluent:Notify({
+            Title = "Success",
+            Content = "Loaded " .. count .. " items! Check your inventory menu now.",
+            Duration = 4
+        })
     end
 })
 
--- BUTTON 2: Test with a regular item like Gold Booster
-Tabs.Test:AddButton({
-    Title = "Test 'Gold Booster' Server Giving",
-    Description = "Fires alternative structures for item configurations",
-    Callback = function()
-        TestRemoteFormat("Gold Booster")
-    end
-})
-
-Window:SelectTab(Tabs.Test)
+Window:SelectTab(Tabs.Items)
