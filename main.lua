@@ -3,16 +3,19 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 
 if PlayerGui:FindFirstChild("DeltaCustomUI") then PlayerGui.DeltaCustomUI:Destroy() end
 
--- Safely resolves the exact PlayerStats folder mapped by your UI scripts
-local function getStatsFolder()
-   local pFolder = LP:FindFirstChild("PlayerStats") or (LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head:FindFirstChild("PlayerStats"))
-   return pFolder
-end
-
--- Safely resolves Hopes and Dreams for character-specific Love scaling
-local function getHopesFolder()
-   local pFolder = LP:FindFirstChild("Hopes and Dreams") or (LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head:FindFirstChild("Hopes and Dreams"))
-   return pFolder
+-- Overhauled path finder to update both folders at the exact same time
+local function updateValue(statName, valueToSet)
+   local targets = {
+      LP:FindFirstChild("PlayerStats"),
+      LP:FindFirstChild("Hopes and Dreams"),
+      LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head:FindFirstChild("PlayerStats"),
+      LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head:FindFirstChild("Hopes and Dreams")
+   }
+   for _, folder in pairs(targets) do
+      if folder and folder:FindFirstChild(statName) then
+         folder[statName].Value = valueToSet
+      end
+   end
 end
 
 -- ==========================================
@@ -99,7 +102,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- ==========================================
--- 🛠️ INPUT BOX & BUTTON BUILDERS
+-- 🛠️ ELEMENT BUILDERS
 -- ==========================================
 local function addInputBox(parentScroll, placeholderText)
    local box = Instance.new("TextBox")
@@ -134,31 +137,31 @@ local function showTab(tabName)
 end
 
 -- ==========================================
--- 📊 TAB 1: STATS & GOLD (WITH VAL INPUTS)
+-- 📊 TAB 1: STATS (LOVE & GOLD INPUTS)
 -- ==========================================
-local loveInput = addInputBox(StatsScroll, "Type Love Level Amount...")
-addButton(StatsScroll, "Set Love Level Value", function()
-   local amt = tonumber(loveInput.Text) or 100
-   local s = getStatsFolder()
-   if s and s:FindFirstChild("Love") then s.Love.Value = amt end
-   local h = getHopesFolder()
-   if h and h:FindFirstChild("Love") then h.Love.Value = amt end
+local loveInput = addInputBox(StatsScroll, "Enter Love Amount...")
+addButton(StatsScroll, "Give Love Level", function()
+   local num = tonumber(loveInput.Text) or 0
+   updateValue("Love", num)
 end)
 
-local goldInput = addInputBox(StatsScroll, "Type Gold Amount...")
-addButton(StatsScroll, "Set Gold Value", function()
-   local amt = tonumber(goldInput.Text) or 999999
-   local s = getStatsFolder()
-   if s and s:FindFirstChild("Gold") then 
-      s.Gold.Value = amt 
-   end
+local goldInput = addInputBox(StatsScroll, "Enter Gold Amount...")
+addButton(StatsScroll, "Give Gold Amount", function()
+   local num = tonumber(goldInput.Text) or 0
+   updateValue("Gold", num)
+end)
+
+local xpInput = addInputBox(StatsScroll, "Enter XP Amount...")
+addButton(StatsScroll, "Give XP Amount", function()
+   local num = tonumber(xpInput.Text) or 0
+   updateValue("XP", num)
 end)
 
 -- ==========================================
--- ⚔️ TAB 2: WEAPONS & REAL GOLD
+-- ⚔️ TAB 2: WEAPONS
 -- ==========================================
-local weaponLvlInput = addInputBox(WeaponsScroll, "Type Weapon Level...")
-addButton(WeaponsScroll, "Unlock Weapon Profiles", function()
+local weaponLvlInput = addInputBox(WeaponsScroll, "Enter Weapon Level Value...")
+addButton(WeaponsScroll, "Give All Weapons", function()
    local lvl = tonumber(weaponLvlInput.Text) or 1
    local target = LP:FindFirstChild("Weapons") or LP:FindFirstChild("Items")
    local storage = game.ReplicatedStorage:FindFirstChild("Items") or game.ReplicatedStorage:FindFirstChild("Weapons")
@@ -178,21 +181,11 @@ addButton(WeaponsScroll, "Unlock Weapon Profiles", function()
    end
 end)
 
-addButton(WeaponsScroll, "SELL WEAPONS FOR SERVER GOLD", function()
-   local inv = LP:FindFirstChild("Cards")
-   if inv then
-      for _, item in pairs(inv:GetChildren()) do
-         game.ReplicatedStorage.SendServer.Sell:FireServer(item, "Cards")
-         task.wait(0.05)
-      end
-   end
-end)
-
 -- ==========================================
--- 🛡️ TAB 3: ARMOR & REAL GOLD
+-- 🛡️ TAB 3: ARMOR
 -- ==========================================
-local armorLvlInput = addInputBox(ArmorScroll, "Type Armor Level...")
-addButton(ArmorScroll, "Unlock Armor Profiles", function()
+local armorLvlInput = addInputBox(ArmorScroll, "Enter Armor Level Value...")
+addButton(ArmorScroll, "Give All Armor Types", function()
    local lvl = tonumber(armorLvlInput.Text) or 1
    local target = LP:FindFirstChild("Armor")
    local storage = game.ReplicatedStorage:FindFirstChild("Armor")
@@ -212,21 +205,11 @@ addButton(ArmorScroll, "Unlock Armor Profiles", function()
    end
 end)
 
-addButton(ArmorScroll, "SELL ARMOR FOR SERVER GOLD", function()
-   local inv = LP:FindFirstChild("Armor")
-   if inv then
-      for _, item in pairs(inv:GetChildren()) do
-         game.ReplicatedStorage.SendServer.Sell:FireServer(item, "Armor")
-         task.wait(0.05)
-      end
-   end
-end)
-
 -- ==========================================
--- 🧪 TAB 4: ITEMS
+-- 🧪 TAB 4: ITEMS & TICKETS
 -- ==========================================
-local itemAmountInput = addInputBox(ItemsScroll, "Type Item Stack Size (e.g., 99)...")
-addButton(ItemsScroll, "Unlock All Consumables & Tickets", function()
+local itemAmountInput = addInputBox(ItemsScroll, "Enter Item/Ticket Quantity...")
+addButton(ItemsScroll, "Give All Items & Tickets", function()
    local amtStr = itemAmountInput.Text ~= "" and itemAmountInput.Text or "99"
    local target = LP:FindFirstChild("Items")
    local storage = game.ReplicatedStorage:FindFirstChild("Items")
@@ -237,6 +220,9 @@ addButton(ItemsScroll, "Unlock All Consumables & Tickets", function()
             clone.Name = obj.Name
             clone.Value = amtStr
             clone.Parent = target
+         else
+            -- If you already have the ticket/item folder, overwrite the amount to your new number directly
+            target:FindFirstChild(obj.Name).Value = amtStr
          end
       end
    end
