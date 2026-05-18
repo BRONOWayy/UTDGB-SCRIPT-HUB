@@ -1,224 +1,268 @@
--- [[ NEBULAX ELITE TERMINAL ]]
--- [[ CREATED BY: MAX ]]
--- [[ VERSION: 5.5 - MICRO-ELITE BUILD ]]
+local LP = game.Players.LocalPlayer
+local PlayerGui = LP:WaitForChild("PlayerGui")
 
-local Players = game:GetService("Players")
+-- Clean up any previous instances of this script to avoid visual overlapping
+if PlayerGui:FindFirstChild("DeltaCustomUI") then PlayerGui.DeltaCustomUI:Destroy() end
+
+-- Helper function to safely locate PlayerStats wherever the game scripts map it
+local function getStats()
+   local c = LP.Character
+   return (c and c:FindFirstChild("Head") and c.Head:FindFirstChild("PlayerStats")) or LP:FindFirstChild("PlayerStats")
+end
+
+-- ==========================================
+-- 🛠️ BASE NATIVE GUI ENGINE
+-- ==========================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DeltaCustomUI"
+ScreenGui.Parent = PlayerGui
+ScreenGui.ResetOnSpawn = false
+
+-- Main Drag Container Panel (Fixed dimensions, clean theme)
+local Main = Instance.new("Frame")
+Main.Name = "MainWindow"
+Main.Size = UDim2.new(0, 480, 0, 300)
+Main.Position = UDim2.new(0.5, -240, 0.5, -150)
+Main.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+Main.BorderSizePixel = 1
+Main.BorderColor3 = Color3.fromRGB(70, 70, 75)
+Main.Active = true
+Main.Parent = ScreenGui
+
+-- Tab Navigation Sidebar Panel (Left Side)
+local Nav = Instance.new("Frame")
+Nav.Size = UDim2.new(0, 110, 1, 0)
+Nav.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+Nav.BorderSizePixel = 0
+Nav.Parent = Main
+
+-- Content Output Display Panel (Right Side)
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, -120, 1, -10)
+Content.Position = UDim2.new(0, 115, 0, 5)
+Content.BackgroundTransparency = 1
+Content.Parent = Main
+
+-- Scroll Wheel Frame (Handles vertical overflowing)
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, 0, 1, 0)
+Scroll.BackgroundTransparency = 1
+Scroll.BorderSizePixel = 0
+Scroll.CanvasSize = UDim2.new(0, 0, 0, 450) -- Dynamic height capacity
+Scroll.ScrollBarThickness = 6
+Scroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
+Scroll.Parent = Content
+
+local Layout = Instance.new("UIListLayout")
+Layout.Padding = UDim.new(0, 6)
+Layout.SortOrder = Enum.SortOrder.LayoutOrder
+Layout.Parent = Scroll
+
+-- Core interaction tables mapped by tab context
+local TabData = {Stats = {}, Weapons = {}, Armor = {}, Items = {}}
+
+-- ==========================================
+-- 👋 CUSTOM ACTIVE DRAG HANDLER SCRIPT
+-- ==========================================
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
-local CoreGui = game:GetService("CoreGui")
-local VirtualUser = game:GetService("VirtualUser")
-local Lighting = game:GetService("Lighting")
-local TeleportService = game:GetService("TeleportService")
-local LocalPlayer = Players.LocalPlayer
+local dragging, dragInput, dragStart, startPos
 
--- [[ PRE-EXECUTION CLEANUP ]]
-if CoreGui:FindFirstChild("NebulaX_Master") then
-    CoreGui.NebulaX_Master:Destroy()
+local function update(input)
+   local delta = input.Position - dragStart
+   Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
 
--- [[ GLOBAL CONFIGURATION ]]
-_G.NebulaConfig = {
-    -- Combat (Glue) + 4 Sub-Features
-    GlueEnabled = false,
-    GlueMode = "None",
-    GlueHeight = 3,
-    OrbitRadius = 20,
-    OrbitSpeed = 4,
-    GlueDesync = false,    -- 1. Jitter motion
-    AutoLook = false,      -- 2. Force face target
-    VelocityLock = false,  -- 3. Zero out target physics
-    OrbitDirection = 1,    -- 4. Clockwise/Counter toggle
-
-    -- Movement (Flight) + 4 Sub-Features
-    FlightEnabled = false,
-    FlightMode = "Manual", 
-    FlightSpeed = 75,
-    Noclip = false,        -- 1. Collision delete
-    InfJump = false,       -- 2. Air jump enabled
-    NoFall = false,        -- 3. Fall damage bypass
-    SpeedMult = 1,         -- 4. Walkspeed multiplier
-
-    -- Utility + 4 Sub-Features
-    M1Spam = false,
-    FPSBoost = false,      -- 1. Graphics reducer
-    ServerHop = false,     -- 2. Universal place hopper
-    FullBright = false,    -- 3. Gamma override
-    HiddenDev = false,     -- 4. Console cloaking
-    
-    SelectedTargets = {},
-    SaveOnExit = true
-}
-
--- [[ THEME ENGINE ]]
-local Colors = {
-    MainBG = Color3.fromRGB(12, 10, 20),
-    SidebarBG = Color3.fromRGB(6, 4, 10),
-    Accent = Color3.fromRGB(180, 100, 255),
-    Text = Color3.fromRGB(240, 240, 240),
-    ButtonNormal = Color3.fromRGB(25, 20, 35),
-    ButtonActive = Color3.fromRGB(180, 100, 255),
-    Danger = Color3.fromRGB(255, 60, 60)
-}
-
--- [[ UI INITIALIZATION - SCALED DOWN ]]
-local NebulaX = Instance.new("ScreenGui", CoreGui)
-NebulaX.Name = "NebulaX_Master"
-
-local MainFrame = Instance.new("Frame", NebulaX)
-MainFrame.Name = "MainHub"
-MainFrame.Size = UDim2.new(0, 520, 0, 380) -- Smaller, more compact footprint
-MainFrame.Position = UDim2.new(0.5, -260, 0.5, -190)
-MainFrame.BackgroundColor3 = Colors.MainBG
-MainFrame.Active = true
-MainFrame.Draggable = true
-Instance.new("UICorner", MainFrame)
-local MainStroke = Instance.new("UIStroke", MainFrame); MainStroke.Color = Colors.Accent; MainStroke.Thickness = 1.5
-
--- [[ SIDEBAR & TABS ]]
-local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size = UDim2.new(0, 140, 1, 0)
-Sidebar.BackgroundColor3 = Colors.SidebarBG
-Instance.new("UICorner", Sidebar)
-
-local PageHolder = Instance.new("Frame", MainFrame)
-PageHolder.Size = UDim2.new(1, -160, 1, -60)
-PageHolder.Position = UDim2.new(0, 150, 0, 50)
-PageHolder.BackgroundTransparency = 1
-
-local Pages = {}
-local function AddTab(name)
-    local NewPage = Instance.new("ScrollingFrame", PageHolder)
-    NewPage.Size = UDim2.new(1, 0, 1, 0)
-    NewPage.BackgroundTransparency = 1
-    NewPage.Visible = (#PageHolder:GetChildren() == 1)
-    NewPage.ScrollBarThickness = 0
-    Instance.new("UIListLayout", NewPage).Padding = UDim.new(0, 8)
-    Pages[name] = NewPage
-
-    local TabBtn = Instance.new("TextButton", Sidebar)
-    TabBtn.Size = UDim2.new(0.9, 0, 0, 35)
-    TabBtn.Position = UDim2.new(0.05, 0, 0, 80 + (#Sidebar:GetChildren()-2) * 40)
-    TabBtn.Text = name; TabBtn.TextColor3 = Colors.Text; TabBtn.BackgroundColor3 = NewPage.Visible and Colors.Accent or Colors.ButtonNormal
-    Instance.new("UICorner", TabBtn)
-
-    TabBtn.MouseButton1Click:Connect(function()
-        for _, p in pairs(Pages) do p.Visible = false end
-        for _, b in pairs(Sidebar:GetChildren()) do if b:IsA("TextButton") then b.BackgroundColor3 = Colors.ButtonNormal end end
-        NewPage.Visible = true; TabBtn.BackgroundColor3 = Colors.Accent
-    end)
-    return NewPage
-end
-
-local CombatTab = AddTab("Havoc")
-local MoveTab = AddTab("Phase")
-local UtilTab = AddTab("Terminal")
-local LogTab = AddTab("Status")
-
--- [[ PLAYER SELECTOR ENGINE ]]
-local TargetScroll = Instance.new("ScrollingFrame", CombatTab)
-TargetScroll.Size = UDim2.new(1, -5, 0, 140); TargetScroll.BackgroundTransparency = 1; TargetScroll.ScrollBarThickness = 2
-Instance.new("UIListLayout", TargetScroll)
-
-local function PopulatePlayers()
-    for _, item in pairs(TargetScroll:GetChildren()) do if item:IsA("TextButton") then item:Destroy() end end
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local pBtn = Instance.new("TextButton", TargetScroll)
-            pBtn.Size = UDim2.new(1, -10, 0, 28); pBtn.Text = player.DisplayName
-            pBtn.BackgroundColor3 = table.find(_G.NebulaConfig.SelectedTargets, player.Name) and Colors.Accent or Colors.SidebarBG
-            pBtn.TextColor3 = Colors.Text; Instance.new("UICorner", pBtn)
-            pBtn.MouseButton1Click:Connect(function()
-                local find = table.find(_G.NebulaConfig.SelectedTargets, player.Name)
-                if find then table.remove(_G.NebulaConfig.SelectedTargets, find) else table.insert(_G.NebulaConfig.SelectedTargets, player.Name) end
-                PopulatePlayers()
-            end)
-        end
-    end
-end
-PopulatePlayers(); Players.PlayerAdded:Connect(PopulatePlayers); Players.PlayerRemoving:Connect(PopulatePlayers)
-
--- [[ UNIVERSAL SERVER HOPPER (PLACE-AGNOSTIC) ]]
-local function ServerHop(targetUser)
-    local success, result = pcall(function()
-        local players = Players:GetPlayers()
-        -- Logic: Uses TeleportService to find valid instances without "Same Game" restrictions
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-    end)
-end
-
--- [[ UTILITY BUTTONS (THE 4 LITTLE THINGS) ]]
-local function NewToggle(txt, p, flag)
-    local b = Instance.new("TextButton", p)
-    b.Size = UDim2.new(1, -10, 0, 35); b.Text = txt; b.TextColor3 = Colors.Text
-    b.BackgroundColor3 = _G.NebulaConfig[flag] and Colors.Accent or Colors.ButtonNormal
-    Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function()
-        _G.NebulaConfig[flag] = not _G.NebulaConfig[flag]
-        b.BackgroundColor3 = _G.NebulaConfig[flag] and Colors.Accent or Colors.ButtonNormal
-    end)
-end
-
--- Tab Content
-NewToggle("Glue Desync (Jitter)", CombatTab, "GlueDesync")
-NewToggle("Orbit Velocity Lock", CombatTab, "VelocityLock")
-NewToggle("Phase (Noclip)", MoveTab, "Noclip")
-NewToggle("Infinite Jump", MoveTab, "InfJump")
-
--- [[ FPS BOOST & HOPPER ]]
-local BoostBtn = Instance.new("TextButton", UtilTab)
-BoostBtn.Size = UDim2.new(1, -10, 0, 35); BoostBtn.Text = "Execute FPS Boost"; BoostBtn.BackgroundColor3 = Colors.ButtonNormal; BoostBtn.TextColor3 = Colors.Text
-Instance.new("UICorner", BoostBtn)
-BoostBtn.MouseButton1Click:Connect(function()
-    settings().Rendering.QualityLevel = 1
-    for _, v in pairs(game:GetDescendants()) do
-        if v:IsA("Part") or v:IsA("MeshPart") then v.Material = Enum.Material.Plastic; v.Reflectance = 0
-        elseif v:IsA("Decal") then v.Transparency = 1 end
-    end
-    Lighting.GlobalShadows = false
-    print("NebulaX: Boost Applied.")
+Main.InputBegan:Connect(function(input)
+   if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+      dragging = true
+      dragStart = input.Position
+      startPos = Main.Position
+      
+      input.Changed:Connect(function()
+         if input.UserInputState == Enum.UserInputState.End then
+            dragging = false
+         end
+      end)
+   end
 end)
 
-local HopBtn = Instance.new("TextButton", UtilTab)
-HopBtn.Size = UDim2.new(1, -10, 0, 35); HopBtn.Text = "Universal Server Hop"; HopBtn.BackgroundColor3 = Colors.ButtonNormal; HopBtn.TextColor3 = Colors.Text
-Instance.new("UICorner", HopBtn)
-HopBtn.MouseButton1Click:Connect(function() ServerHop() end)
+Main.InputChanged:Connect(function(input)
+   if input.UserInputType == Enum.UserInputType.MouseBehavior or input.UserInputType == Enum.UserInputType.Touch then
+      dragInput = input
+   end
+end)
 
--- [[ HEARTBEAT LOOP ]]
-RunService.Heartbeat:Connect(function()
-    local Char = LocalPlayer.Character
-    local Root = Char and Char:FindFirstChild("HumanoidRootPart")
-    if not Root then return end
+UserInputService.InputChanged:Connect(function(input)
+   if input == dragInput and dragging then
+      update(input)
+   end
+end)
 
-    -- Flight Logic
-    if _G.NebulaConfig.FlightEnabled then
-        Root.Velocity = Vector3.new(0, 0.1, 0)
-        local MoveDir = Char.Humanoid.MoveDirection
-        Root.CFrame = Root.CFrame + (MoveDir * (_G.NebulaConfig.FlightSpeed / 10))
-    end
+-- ==========================================
+-- 🛠️ UI CONTROL MAKERS
+-- ==========================================
+local function addToggle(tab, text, callback)
+   local btn = Instance.new("TextButton")
+   btn.Size = UDim2.new(1, -10, 0, 40)
+   btn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+   btn.TextColor3 = Color3.fromRGB(220, 60, 60)
+   btn.Text = text .. " [OFF]"
+   btn.Font = Enum.Font.SourceSansBold
+   btn.TextSize = 15
+   btn.BorderSizePixel = 0
+   
+   local state = false
+   btn.MouseButton1Click:Connect(function()
+      state = not state
+      btn.Text = text .. (state and " [ON]" or " [OFF]")
+      btn.TextColor3 = state and Color3.fromRGB(60, 220, 60) or Color3.fromRGB(220, 60, 60)
+      callback(state)
+   end)
+   table.insert(TabData[tab], btn)
+end
 
-    -- Noclip Path
-    if _G.NebulaConfig.Noclip then
-        for _, part in pairs(Char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    end
+local function addButton(tab, text, callback)
+   local btn = Instance.new("TextButton")
+   btn.Size = UDim2.new(1, -10, 0, 40)
+   btn.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
+   btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+   btn.Text = text
+   btn.Font = Enum.Font.SourceSans
+   btn.TextSize = 14
+   btn.BorderSizePixel = 0
+   btn.MouseButton1Click:Connect(callback)
+   table.insert(TabData[tab], btn)
+end
 
-    -- Glue Path
-    if #_G.NebulaConfig.SelectedTargets > 0 then
-        for i, name in ipairs(_G.NebulaConfig.SelectedTargets) do
-            local TPlr = Players:FindFirstChild(name)
-            if TPlr and TPlr.Character and TPlr.Character:FindFirstChild("HumanoidRootPart") then
-                local TRoot = TPlr.Character.HumanoidRootPart
-                if _G.NebulaConfig.VelocityLock then TRoot.Velocity = Vector3.zero end
-                
-                local Angle = (tick() * _G.NebulaConfig.OrbitSpeed) + (i * (math.pi * 2 / #_G.NebulaConfig.SelectedTargets))
-                local Jitter = _G.NebulaConfig.GlueDesync and math.random(-1,1) or 0
-                local Offset = Vector3.new(math.cos(Angle) * (_G.NebulaConfig.OrbitRadius + Jitter), _G.NebulaConfig.GlueHeight, math.sin(Angle) * (_G.NebulaConfig.OrbitRadius + Jitter))
-                TRoot.CFrame = CFrame.new(Root.Position + Offset)
+local function showTab(tabName)
+   -- Clear layout tree while tracking structural layout anchors
+   for _, child in pairs(Scroll:GetChildren()) do
+      if child:IsA("TextButton") then child:Destroy() end
+   end
+   for _, element in pairs(TabData[tabName]) do
+      element.Parent = Scroll
+   end
+end
+
+-- ==========================================
+-- 📊 TAB 1: STATS DATA
+-- ==========================================
+addToggle("Stats", "Auto Farm Love", function(state)
+   _G.AutoLoveFarm = state
+   task.spawn(function()
+      while _G.AutoLoveFarm do
+         local stats = getStats()
+         if stats and stats:FindFirstChild("Love") then
+            stats.Love.Value = stats.Love.Value + 1
+         end
+         task.wait(0.5)
+      end
+   end)
+end)
+
+addButton("Stats", "Instantly Max XP Bar", function()
+   local stats = getStats()
+   if stats and stats:FindFirstChild("XP") and stats:FindFirstChild("Max") then
+      stats.XP.Value = stats.Max.Value
+   end
+end)
+
+-- ==========================================
+-- ⚔️ TAB 2: WEAPONS DATA
+-- ==========================================
+addButton("Weapons", "Unlock All Weapons", function()
+   local target = LP:FindFirstChild("Weapons") or LP:FindFirstChild("Items")
+   local storage = game.ReplicatedStorage:FindFirstChild("Items") or game.ReplicatedStorage:FindFirstChild("Weapons")
+   if target and storage then
+      for _, obj in pairs(storage:GetChildren()) do
+         if not target:FindFirstChild(obj.Name) then
+            local clone = Instance.new("Folder")
+            clone.Name = obj.Name
+            for _, name in pairs({"Upgrades", "UpStrength", "Level"}) do
+               local v = Instance.new("IntValue", clone)
+               v.Name = name
+               v.Value = 1
             end
-        end
-    end
+            clone.Parent = target
+         end
+      end
+   end
 end)
 
-print("NEBULAX v5.5: Terminal Online.")
+addButton("Weapons", "Sell Cards/Spells (Gold)", function()
+   local inv = LP:FindFirstChild("Cards")
+   if inv and #inv:GetChildren() > 0 then
+      game.ReplicatedStorage.SendServer.Sell:FireServer(inv:GetChildren(), "Cards")
+   end
+end)
+
+-- ==========================================
+-- 🛡️ TAB 3: ARMOR DATA
+-- ==========================================
+addButton("Armor", "Unlock All Armor Types", function()
+   local target = LP:FindFirstChild("Armor")
+   local storage = game.ReplicatedStorage:FindFirstChild("Armor")
+   if target and storage then
+      for _, obj in pairs(storage:GetChildren()) do
+         if not target:FindFirstChild(obj.Name) then
+            local clone = Instance.new("Folder")
+            clone.Name = obj.Name
+            for _, name in pairs({"Perfected", "Upgrades", "UpDefense", "UpStrength", "UpMagic", "Level"}) do
+               local v = Instance.new(name == "Perfected" and "BoolValue" or "IntValue", clone)
+               v.Name = name
+               if name ~= "Perfected" then v.Value = 1 end
+            end
+            clone.Parent = target
+         end
+      end
+   end
+end)
+
+addButton("Armor", "Sell Armor Inventory (Gold)", function()
+   local inv = LP:FindFirstChild("Armor")
+   if inv and #inv:GetChildren() > 0 then
+      game.ReplicatedStorage.SendServer.Sell:FireServer(inv:GetChildren(), "Armor")
+   end
+end)
+
+-- ==========================================
+-- 🧪 TAB 4: ITEMS DATA
+-- ==========================================
+addButton("Items", "Unlock All Consumables & Tickets", function()
+   local target = LP:FindFirstChild("Items")
+   local storage = game.ReplicatedStorage:FindFirstChild("Items")
+   if target and storage then
+      for _, obj in pairs(storage:GetChildren()) do
+         if not target:FindFirstChild(obj.Name) then
+            local clone = Instance.new("StringValue")
+            clone.Name = obj.Name
+            clone.Value = "99"
+            clone.Parent = target
+         end
+      end
+   end
+end)
+
+-- ==========================================
+-- 🗂️ DRAW NAVIGATION TABS
+-- ==========================================
+local tabs = {"Stats", "Weapons", "Armor", "Items"}
+for i, name in pairs(tabs) do
+   local tabBtn = Instance.new("TextButton")
+   tabBtn.Size = UDim2.new(1, -10, 0, 40)
+   tabBtn.Position = UDim2.new(0, 5, 0, (i-1) * 45 + 10)
+   tabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+   tabBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
+   tabBtn.Text = name
+   tabBtn.Font = Enum.Font.SourceSansBold
+   tabBtn.TextSize = 14
+   tabBtn.BorderSizePixel = 0
+   tabBtn.Parent = Nav
+   
+   tabBtn.MouseButton1Click:Connect(function()
+      showTab(name)
+   end)
+end
+
+-- Force load the default Tab content layout engine
+showTab("Stats")
