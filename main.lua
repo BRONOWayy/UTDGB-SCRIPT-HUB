@@ -3,9 +3,16 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 
 if PlayerGui:FindFirstChild("DeltaCustomUI") then PlayerGui.DeltaCustomUI:Destroy() end
 
-local function getStats()
-   local c = LP.Character
-   return (c and c:FindFirstChild("Head") and c.Head:FindFirstChild("PlayerStats")) or LP:FindFirstChild("PlayerStats")
+-- Safely resolves the exact PlayerStats folder mapped by your UI scripts
+local function getStatsFolder()
+   local pFolder = LP:FindFirstChild("PlayerStats") or (LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head:FindFirstChild("PlayerStats"))
+   return pFolder
+end
+
+-- Safely resolves Hopes and Dreams for character-specific Love scaling
+local function getHopesFolder()
+   local pFolder = LP:FindFirstChild("Hopes and Dreams") or (LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head:FindFirstChild("Hopes and Dreams"))
+   return pFolder
 end
 
 -- ==========================================
@@ -45,7 +52,7 @@ local function createTabFrame(name)
    Scroll.Size = UDim2.new(1, 0, 1, 0)
    Scroll.BackgroundTransparency = 1
    Scroll.BorderSizePixel = 0
-   Scroll.CanvasSize = UDim2.new(0, 0, 0, 500)
+   Scroll.CanvasSize = UDim2.new(0, 0, 0, 550)
    Scroll.ScrollBarThickness = 6
    Scroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
    Scroll.Visible = false
@@ -66,7 +73,7 @@ local ArmorScroll = createTabFrame("Armor")
 local ItemsScroll = createTabFrame("Items")
 
 -- ==========================================
--- 👋 ACTIVE DRAG HANDLER
+-- 👋 CUSTOM DRAG ENGINE
 -- ==========================================
 local UserInputService = game:GetService("UserInputService")
 local dragging, dragInput, dragStart, startPos
@@ -78,46 +85,35 @@ end
 
 Main.InputBegan:Connect(function(input)
    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-      dragging = true
-      dragStart = input.Position
-      startPos = Main.Position
+      dragging = true; dragStart = input.Position; startPos = Main.Position
       input.Changed:Connect(function()
          if input.UserInputState == Enum.UserInputState.End then dragging = false end
       end)
    end
 end)
-
 Main.InputChanged:Connect(function(input)
-   if input.UserInputType == Enum.UserInputType.MouseBehavior or input.UserInputType == Enum.UserInputType.Touch then
-      dragInput = input
-   end
+   if input.UserInputType == Enum.UserInputType.MouseBehavior or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
    if input == dragInput and dragging then update(input) end
 end)
 
 -- ==========================================
--- 🛠️ ELEMENT BUILDERS
+-- 🛠️ INPUT BOX & BUTTON BUILDERS
 -- ==========================================
-local function addToggle(parentScroll, text, callback)
-   local btn = Instance.new("TextButton")
-   btn.Size = UDim2.new(1, -10, 0, 40)
-   btn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-   btn.TextColor3 = Color3.fromRGB(220, 60, 60)
-   btn.Text = text .. " [OFF]"
-   btn.Font = Enum.Font.SourceSansBold
-   btn.TextSize = 15
-   btn.BorderSizePixel = 0
-   btn.Parent = parentScroll
-   
-   local state = false
-   btn.MouseButton1Click:Connect(function()
-      state = not state
-      btn.Text = text .. (state and " [ON]" or " [OFF]")
-      btn.TextColor3 = state and Color3.fromRGB(60, 220, 60) or Color3.fromRGB(220, 60, 60)
-      callback(state)
-   end)
+local function addInputBox(parentScroll, placeholderText)
+   local box = Instance.new("TextBox")
+   box.Size = UDim2.new(1, -10, 0, 35)
+   box.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
+   box.TextColor3 = Color3.fromRGB(255, 255, 255)
+   box.PlaceholderText = placeholderText
+   box.Text = ""
+   box.Font = Enum.Font.SourceSans
+   box.TextSize = 14
+   box.BorderSizePixel = 1
+   box.BorderColor3 = Color3.fromRGB(50, 50, 55)
+   box.Parent = parentScroll
+   return box
 end
 
 local function addButton(parentScroll, text, callback)
@@ -126,7 +122,7 @@ local function addButton(parentScroll, text, callback)
    btn.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
    btn.Text = text
-   btn.Font = Enum.Font.SourceSans
+   btn.Font = Enum.Font.SourceSansBold
    btn.TextSize = 14
    btn.BorderSizePixel = 0
    btn.Parent = parentScroll
@@ -134,38 +130,36 @@ local function addButton(parentScroll, text, callback)
 end
 
 local function showTab(tabName)
-   for name, frame in pairs(TabFrames) do
-      frame.Visible = (name == tabName)
-   end
+   for name, frame in pairs(TabFrames) do frame.Visible = (name == tabName) end
 end
 
 -- ==========================================
--- 📊 TAB 1: STATS
+-- 📊 TAB 1: STATS & GOLD (WITH VAL INPUTS)
 -- ==========================================
-addToggle(StatsScroll, "Auto Farm Love (Visual Only)", function(state)
-   _G.AutoLoveFarm = state
-   task.spawn(function()
-      while _G.AutoLoveFarm do
-         local stats = getStats()
-         if stats and stats:FindFirstChild("Love") then
-            stats.Love.Value = stats.Love.Value + 1
-         end
-         task.wait(0.5)
-      end
-   end)
+local loveInput = addInputBox(StatsScroll, "Type Love Level Amount...")
+addButton(StatsScroll, "Set Love Level Value", function()
+   local amt = tonumber(loveInput.Text) or 100
+   local s = getStatsFolder()
+   if s and s:FindFirstChild("Love") then s.Love.Value = amt end
+   local h = getHopesFolder()
+   if h and h:FindFirstChild("Love") then h.Love.Value = amt end
 end)
 
-addButton(StatsScroll, "Max XP Bar (Visual Only)", function()
-   local stats = getStats()
-   if stats and stats:FindFirstChild("XP") and stats:FindFirstChild("Max") then
-      stats.XP.Value = stats.Max.Value
+local goldInput = addInputBox(StatsScroll, "Type Gold Amount...")
+addButton(StatsScroll, "Set Gold Value", function()
+   local amt = tonumber(goldInput.Text) or 999999
+   local s = getStatsFolder()
+   if s and s:FindFirstChild("Gold") then 
+      s.Gold.Value = amt 
    end
 end)
 
 -- ==========================================
 -- ⚔️ TAB 2: WEAPONS & REAL GOLD
 -- ==========================================
+local weaponLvlInput = addInputBox(WeaponsScroll, "Type Weapon Level...")
 addButton(WeaponsScroll, "Unlock Weapon Profiles", function()
+   local lvl = tonumber(weaponLvlInput.Text) or 1
    local target = LP:FindFirstChild("Weapons") or LP:FindFirstChild("Items")
    local storage = game.ReplicatedStorage:FindFirstChild("Items") or game.ReplicatedStorage:FindFirstChild("Weapons")
    if target and storage then
@@ -176,7 +170,7 @@ addButton(WeaponsScroll, "Unlock Weapon Profiles", function()
             for _, name in pairs({"Upgrades", "UpStrength", "Level"}) do
                local v = Instance.new("IntValue", clone)
                v.Name = name
-               v.Value = 1
+               v.Value = lvl
             end
             clone.Parent = target
          end
@@ -184,13 +178,12 @@ addButton(WeaponsScroll, "Unlock Weapon Profiles", function()
    end
 end)
 
-addButton(WeaponsScroll, "SELL ALL CARDS (SERVER-SIDE GOLD)", function()
+addButton(WeaponsScroll, "SELL WEAPONS FOR SERVER GOLD", function()
    local inv = LP:FindFirstChild("Cards")
    if inv then
-      -- CRITICAL FIX: Loops and fires each object individually matching server parameters
       for _, item in pairs(inv:GetChildren()) do
          game.ReplicatedStorage.SendServer.Sell:FireServer(item, "Cards")
-         task.wait(0.1) -- Minimal network buffer delay
+         task.wait(0.05)
       end
    end
 end)
@@ -198,7 +191,9 @@ end)
 -- ==========================================
 -- 🛡️ TAB 3: ARMOR & REAL GOLD
 -- ==========================================
+local armorLvlInput = addInputBox(ArmorScroll, "Type Armor Level...")
 addButton(ArmorScroll, "Unlock Armor Profiles", function()
+   local lvl = tonumber(armorLvlInput.Text) or 1
    local target = LP:FindFirstChild("Armor")
    local storage = game.ReplicatedStorage:FindFirstChild("Armor")
    if target and storage then
@@ -209,7 +204,7 @@ addButton(ArmorScroll, "Unlock Armor Profiles", function()
             for _, name in pairs({"Perfected", "Upgrades", "UpDefense", "UpStrength", "UpMagic", "Level"}) do
                local v = Instance.new(name == "Perfected" and "BoolValue" or "IntValue", clone)
                v.Name = name
-               if name ~= "Perfected" then v.Value = 1 end
+               v.Value = (name == "Perfected" and false or lvl)
             end
             clone.Parent = target
          end
@@ -217,13 +212,12 @@ addButton(ArmorScroll, "Unlock Armor Profiles", function()
    end
 end)
 
-addButton(ArmorScroll, "SELL ALL ARMOR (SERVER-SIDE GOLD)", function()
+addButton(ArmorScroll, "SELL ARMOR FOR SERVER GOLD", function()
    local inv = LP:FindFirstChild("Armor")
    if inv then
-      -- CRITICAL FIX: Fires the remote passing single entities to credit real gold
       for _, item in pairs(inv:GetChildren()) do
          game.ReplicatedStorage.SendServer.Sell:FireServer(item, "Armor")
-         task.wait(0.1)
+         task.wait(0.05)
       end
    end
 end)
@@ -231,7 +225,9 @@ end)
 -- ==========================================
 -- 🧪 TAB 4: ITEMS
 -- ==========================================
-addButton(ItemsScroll, "Unlock Consumable Profiles", function()
+local itemAmountInput = addInputBox(ItemsScroll, "Type Item Stack Size (e.g., 99)...")
+addButton(ItemsScroll, "Unlock All Consumables & Tickets", function()
+   local amtStr = itemAmountInput.Text ~= "" and itemAmountInput.Text or "99"
    local target = LP:FindFirstChild("Items")
    local storage = game.ReplicatedStorage:FindFirstChild("Items")
    if target and storage then
@@ -239,7 +235,7 @@ addButton(ItemsScroll, "Unlock Consumable Profiles", function()
          if not target:FindFirstChild(obj.Name) then
             local clone = Instance.new("StringValue")
             clone.Name = obj.Name
-            clone.Value = "99"
+            clone.Value = amtStr
             clone.Parent = target
          end
       end
@@ -247,7 +243,7 @@ addButton(ItemsScroll, "Unlock Consumable Profiles", function()
 end)
 
 -- ==========================================
--- 🗂️ RENDER TABS
+-- 🗂️ RENDER NAVIGATION TABS
 -- ==========================================
 local tabs = {"Stats", "Weapons", "Armor", "Items"}
 for i, name in pairs(tabs) do
@@ -262,9 +258,7 @@ for i, name in pairs(tabs) do
    tabBtn.BorderSizePixel = 0
    tabBtn.Parent = Nav
    
-   tabBtn.MouseButton1Click:Connect(function()
-      showTab(name)
-   end)
+   tabBtn.MouseButton1Click:Connect(function() showTab(name) end)
 end
 
 showTab("Stats")
