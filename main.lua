@@ -1,9 +1,8 @@
--- Modern UI Library for Delta Executor
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Currency Network Hub | Delta",
-    SubTitle = "Server-Side Currency Edition",
+    Title = "Network Tester | Delta",
+    SubTitle = "Server-Side Verification",
     TabWidth = 160,
     Size = UDim2.fromOffset(450, 320),
     Acrylic = true,
@@ -12,102 +11,55 @@ local Window = Fluent:CreateWindow({
 })
 
 local Tabs = {
-    Currency = Window:AddTab({ Title = "Real Currency", Icon = "rbxassetid://4483345906" })
+    Test = Window:AddTab({ Title = "Remote Tester", Icon = "rbxassetid://4483345906" })
 }
 
--- Input variables for your custom amounts
-local InputTickets = 0
-local InputGold = 0
-
-local Player = game.Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ItemEvents = ReplicatedStorage:FindFirstChild("ItemEvents")
 
--- Function to hunt down remotes and fire them
-local function ExploitNetworkValue(searchName, finalAmount)
-    local firedAny = false
-    
-    -- Deep scan all folders inside ReplicatedStorage for currency handlers
-    for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-            local currentName = remote.Name:lower()
-            
-            -- If the network event matches our currency search term
-            if currentName:find(searchName) or currentName:find("add" .. searchName) or currentName:find("give" .. searchName) then
-                -- Fire the number straight to the server host
-                remote:FireServer(finalAmount)
-                firedAny = true
-            end
-        end
+-- Helper function to test different ways a server likes to receive instructions
+local function TestRemoteFormat(remoteName)
+    local remote = ItemEvents and ItemEvents:FindFirstChild(remoteName)
+    if not remote or not remote:IsA("RemoteEvent") then
+        Fluent:Notify({ Title = "Error", Content = remoteName .. " event not found!", Duration = 3 })
+        return
     end
-    return firedAny
+
+    -- Format 1: Pass the name of the item as text
+    remote:FireServer(remoteName)
+    
+    -- Format 2: Pass a quantity number
+    remote:FireServer(10)
+    
+    -- Format 3: Pass both item name and a quantity amount
+    remote:FireServer(remoteName, 10)
+    
+    -- Format 4: Pass a boolean validation flag
+    remote:FireServer(true)
+
+    Fluent:Notify({ 
+        Title = "Packets Sent", 
+        Content = "Dispatched multiple parameter formats for: " .. remoteName, 
+        Duration = 4 
+    })
 end
 
--- =========================================================
--- TICKETS SECTION
--- =========================================================
-Tabs.Currency:AddInput("TicketBox", {
-    Title = "Enter Ticket Amount",
-    Default = "0",
-    Numeric = true,
-    Finished = true,
-    Callback = function(Value)
-        InputTickets = tonumber(Value) or 0
-    end
-})
-
-Tabs.Currency:AddButton({
-    Title = "Inject Real Tickets",
+-- BUTTON 1: Test specifically with the Token of LOVE (The Ticket)
+Tabs.Test:AddButton({
+    Title = "Test 'Token of LOVE' Server Giving",
+    Description = "Sends 4 distinct data types to force a server reply",
     Callback = function()
-        -- Scans for 'ticket' or 'token' remotes
-        local success = ExploitNetworkValue("ticket", InputTickets) or ExploitNetworkValue("token", InputTickets)
-        
-        if success then
-            Fluent:Notify({ Title = "Network Packet Sent", Content = "Fired ticket updates to the server!", Duration = 3 })
-        else
-            -- Fallback: If no server remote exists, try forcing it locally inside your player statistics
-            local statFolder = Player:FindFirstChild("PlayerStats") or Player
-            local ticketObj = statFolder:FindFirstChild("Tickets", true) or statFolder:FindFirstChild("Ticket", true)
-            if ticketObj then
-                ticketObj.Value = InputTickets
-                Fluent:Notify({ Title = "Local Update", Content = "Set local ticket value property.", Duration = 3 })
-            else
-                Fluent:Notify({ Title = "Error", Content = "Could not find a ticket network line or value!", Duration = 4 })
-            end
-        end
+        TestRemoteFormat("Token of LOVE")
     end
 })
 
--- =========================================================
--- GOLD SECTION
--- =========================================================
-Tabs.Currency:AddInput("GoldBox", {
-    Title = "Enter Gold Amount",
-    Default = "0",
-    Numeric = true,
-    Finished = true,
-    Callback = function(Value)
-        InputGold = tonumber(Value) or 0
-    end
-})
-
-Tabs.Currency:AddButton({
-    Title = "Inject Real Gold",
+-- BUTTON 2: Test with a regular item like Gold Booster
+Tabs.Test:AddButton({
+    Title = "Test 'Gold Booster' Server Giving",
+    Description = "Fires alternative structures for item configurations",
     Callback = function()
-        local success = ExploitNetworkValue("gold", InputGold) or ExploitNetworkValue("money", InputGold)
-        
-        if success then
-            Fluent:Notify({ Title = "Network Packet Sent", Content = "Fired gold updates to the server!", Duration = 3 })
-        else
-            local statFolder = Player:FindFirstChild("PlayerStats") or Player
-            local goldObj = statFolder:FindFirstChild("Gold", true)
-            if goldObj then
-                goldObj.Value = InputGold
-                Fluent:Notify({ Title = "Local Update", Content = "Set local gold value property.", Duration = 3 })
-            else
-                Fluent:Notify({ Title = "Error", Content = "Could not find a gold network line or value!", Duration = 4 })
-            end
-        end
+        TestRemoteFormat("Gold Booster")
     end
 })
 
-Window:SelectTab(Tabs.Currency)
+Window:SelectTab(Tabs.Test)
