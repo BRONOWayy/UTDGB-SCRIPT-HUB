@@ -3,21 +3,6 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 
 if PlayerGui:FindFirstChild("DeltaCustomUI") then PlayerGui.DeltaCustomUI:Destroy() end
 
--- Overhauled path finder to update both folders at the exact same time
-local function updateValue(statName, valueToSet)
-   local targets = {
-      LP:FindFirstChild("PlayerStats"),
-      LP:FindFirstChild("Hopes and Dreams"),
-      LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head:FindFirstChild("PlayerStats"),
-      LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head:FindFirstChild("Hopes and Dreams")
-   }
-   for _, folder in pairs(targets) do
-      if folder and folder:FindFirstChild(statName) then
-         folder[statName].Value = valueToSet
-      end
-   end
-end
-
 -- ==========================================
 -- 🛠️ BASE NATIVE GUI ENGINE
 -- ==========================================
@@ -76,7 +61,7 @@ local ArmorScroll = createTabFrame("Armor")
 local ItemsScroll = createTabFrame("Items")
 
 -- ==========================================
--- 👋 CUSTOM DRAG ENGINE
+-- 👋 DRAG HANDLER
 -- ==========================================
 local UserInputService = game:GetService("UserInputService")
 local dragging, dragInput, dragStart, startPos
@@ -137,99 +122,92 @@ local function showTab(tabName)
 end
 
 -- ==========================================
--- 📊 TAB 1: STATS (LOVE & GOLD INPUTS)
+-- 📊 TAB 1: SERVER LOVE & EXP FARM
 -- ==========================================
-local loveInput = addInputBox(StatsScroll, "Enter Love Amount...")
-addButton(StatsScroll, "Give Love Level", function()
-   local num = tonumber(loveInput.Text) or 0
-   updateValue("Love", num)
-end)
-
-local goldInput = addInputBox(StatsScroll, "Enter Gold Amount...")
-addButton(StatsScroll, "Give Gold Amount", function()
-   local num = tonumber(goldInput.Text) or 0
-   updateValue("Gold", num)
-end)
-
-local xpInput = addInputBox(StatsScroll, "Enter XP Amount...")
-addButton(StatsScroll, "Give XP Amount", function()
-   local num = tonumber(xpInput.Text) or 0
-   updateValue("XP", num)
-end)
-
--- ==========================================
--- ⚔️ TAB 2: WEAPONS
--- ==========================================
-local weaponLvlInput = addInputBox(WeaponsScroll, "Enter Weapon Level Value...")
-addButton(WeaponsScroll, "Give All Weapons", function()
-   local lvl = tonumber(weaponLvlInput.Text) or 1
-   local target = LP:FindFirstChild("Weapons") or LP:FindFirstChild("Items")
-   local storage = game.ReplicatedStorage:FindFirstChild("Items") or game.ReplicatedStorage:FindFirstChild("Weapons")
-   if target and storage then
-      for _, obj in pairs(storage:GetChildren()) do
-         if not target:FindFirstChild(obj.Name) then
-            local clone = Instance.new("Folder")
-            clone.Name = obj.Name
-            for _, name in pairs({"Upgrades", "UpStrength", "Level"}) do
-               local v = Instance.new("IntValue", clone)
-               v.Name = name
-               v.Value = lvl
+local loveLoopInput = addInputBox(StatsScroll, "How many levels to farm? (e.g. 50)")
+addButton(StatsScroll, "SERVER-SIDE LOVE FARM", function()
+   local loops = tonumber(loveLoopInput.Text) or 10
+   -- Scans for consumables that award XP or levels and triggers them server-side
+   local items = game.ReplicatedStorage:FindFirstChild("Items")
+   if items and game.ReplicatedStorage:FindFirstChild("ItemEvents") then
+      for _, item in pairs(items:GetChildren()) do
+         local name = string.lower(item.Name)
+         if name:find("love") or name:find("xp") or name:find("level") or name:find("candy") then
+            local remote = game.ReplicatedStorage.ItemEvents:FindFirstChild(item.Name)
+            if remote then
+               for i = 1, loops do
+                  remote:FireServer()
+                  task.wait(0.05)
+               end
             end
-            clone.Parent = target
          end
       end
    end
 end)
 
 -- ==========================================
--- 🛡️ TAB 3: ARMOR
+-- ⚔️ TAB 2: WEAPONS & SERVER GOLD SPAM
 -- ==========================================
-local armorLvlInput = addInputBox(ArmorScroll, "Enter Armor Level Value...")
-addButton(ArmorScroll, "Give All Armor Types", function()
-   local lvl = tonumber(armorLvlInput.Text) or 1
-   local target = LP:FindFirstChild("Armor")
+local goldLoopInput = addInputBox(WeaponsScroll, "How many times to spam sell? (e.g. 100)")
+addButton(WeaponsScroll, "SERVER-SIDE GOLD GLITCH (CARDS)", function()
+   local loops = tonumber(goldLoopInput.Text) or 10
+   local storage = game.ReplicatedStorage:FindFirstChild("Cards")
+   if storage and #storage:GetChildren() > 0 then
+      -- Pick the first available card asset from the game files
+      local baseItem = storage:GetChildren()[1]
+      
+      -- Creates a dummy object token to trick the remote parameters
+      local dummy = Instance.new("Folder")
+      dummy.Name = baseItem.Name
+      
+      for i = 1, loops do
+         -- Fires the sell event repeatedly using the spoofed object asset
+         game.ReplicatedStorage.SendServer.Sell:FireServer(dummy, "Cards")
+         task.wait(0.02)
+      end
+   end
+end)
+
+-- ==========================================
+-- 🛡️ TAB 3: ARMOR & SERVER GOLD SPAM
+-- ==========================================
+local armorGoldInput = addInputBox(ArmorScroll, "How many times to spam sell armor?")
+addButton(ArmorScroll, "SERVER-SIDE GOLD GLITCH (ARMOR)", function()
+   local loops = tonumber(armorGoldInput.Text) or 10
    local storage = game.ReplicatedStorage:FindFirstChild("Armor")
-   if target and storage then
-      for _, obj in pairs(storage:GetChildren()) do
-         if not target:FindFirstChild(obj.Name) then
-            local clone = Instance.new("Folder")
-            clone.Name = obj.Name
-            for _, name in pairs({"Perfected", "Upgrades", "UpDefense", "UpStrength", "UpMagic", "Level"}) do
-               local v = Instance.new(name == "Perfected" and "BoolValue" or "IntValue", clone)
-               v.Name = name
-               v.Value = (name == "Perfected" and false or lvl)
+   if storage and #storage:GetChildren() > 0 then
+      local baseItem = storage:GetChildren()[1]
+      local dummy = Instance.new("Folder")
+      dummy.Name = baseItem.Name
+      
+      for i = 1, loops do
+         game.ReplicatedStorage.SendServer.Sell:FireServer(dummy, "Armor")
+         task.wait(0.02)
+      end
+   end
+end)
+
+-- ==========================================
+-- 🧪 TAB 4: REAL ITEM EVENT USE
+-- ==========================================
+local itemUseInput = addInputBox(ItemsScroll, "How many times to trigger item use remote?")
+addButton(ItemsScroll, "FORCE TRIGGER ALL ITEM EVENTS", function()
+   local loops = tonumber(itemUseInput.Text) or 5
+   local events = game.ReplicatedStorage:FindFirstChild("ItemEvents")
+   if events then
+      for _, remote in pairs(events:GetChildren()) do
+         if remote:IsA("RemoteEvent") then
+            for i = 1, loops do
+               remote:FireServer()
+               task.wait(0.02)
             end
-            clone.Parent = target
          end
       end
    end
 end)
 
 -- ==========================================
--- 🧪 TAB 4: ITEMS & TICKETS
--- ==========================================
-local itemAmountInput = addInputBox(ItemsScroll, "Enter Item/Ticket Quantity...")
-addButton(ItemsScroll, "Give All Items & Tickets", function()
-   local amtStr = itemAmountInput.Text ~= "" and itemAmountInput.Text or "99"
-   local target = LP:FindFirstChild("Items")
-   local storage = game.ReplicatedStorage:FindFirstChild("Items")
-   if target and storage then
-      for _, obj in pairs(storage:GetChildren()) do
-         if not target:FindFirstChild(obj.Name) then
-            local clone = Instance.new("StringValue")
-            clone.Name = obj.Name
-            clone.Value = amtStr
-            clone.Parent = target
-         else
-            -- If you already have the ticket/item folder, overwrite the amount to your new number directly
-            target:FindFirstChild(obj.Name).Value = amtStr
-         end
-      end
-   end
-end)
-
--- ==========================================
--- 🗂️ RENDER NAVIGATION TABS
+-- 🗂️ RENDER TABS
 -- ==========================================
 local tabs = {"Stats", "Weapons", "Armor", "Items"}
 for i, name in pairs(tabs) do
