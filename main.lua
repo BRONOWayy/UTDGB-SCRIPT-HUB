@@ -38,10 +38,8 @@ Content.Position = UDim2.new(0, 115, 0, 5)
 Content.BackgroundTransparency = 1
 Content.Parent = Main
 
--- Active View Tab Tracking Table
 local TabFrames = {}
 
--- Function to safely generate a scrolling canvas layout for each tab layer
 local function createTabFrame(name)
    local Scroll = Instance.new("ScrollingFrame")
    Scroll.Size = UDim2.new(1, 0, 1, 0)
@@ -68,7 +66,7 @@ local ArmorScroll = createTabFrame("Armor")
 local ItemsScroll = createTabFrame("Items")
 
 -- ==========================================
--- 👋 ACTIVE DRAG HANDLER SCRIPT
+-- 👋 ACTIVE DRAG HANDLER
 -- ==========================================
 local UserInputService = game:GetService("UserInputService")
 local dragging, dragInput, dragStart, startPos
@@ -100,7 +98,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- ==========================================
--- 🛠️ BUTTON ELEMENT CONSTRUCTORS
+-- 🛠️ ELEMENT BUILDERS
 -- ==========================================
 local function addToggle(parentScroll, text, callback)
    local btn = Instance.new("TextButton")
@@ -142,9 +140,9 @@ local function showTab(tabName)
 end
 
 -- ==========================================
--- 📊 TAB 1: STATS & GOLD CONTROLS
+-- 📊 TAB 1: STATS
 -- ==========================================
-addToggle(StatsScroll, "Auto Farm Love", function(state)
+addToggle(StatsScroll, "Auto Farm Love (Visual Only)", function(state)
    _G.AutoLoveFarm = state
    task.spawn(function()
       while _G.AutoLoveFarm do
@@ -157,30 +155,17 @@ addToggle(StatsScroll, "Auto Farm Love", function(state)
    end)
 end)
 
-addButton(StatsScroll, "Instantly Max XP Bar", function()
+addButton(StatsScroll, "Max XP Bar (Visual Only)", function()
    local stats = getStats()
    if stats and stats:FindFirstChild("XP") and stats:FindFirstChild("Max") then
       stats.XP.Value = stats.Max.Value
    end
 end)
 
--- The Gold generation functions you requested
-addButton(StatsScroll, "Spoof Max Gold (Local-Visual)", function()
-   local stats = getStats()
-   if stats then
-      for _, val in pairs(stats:GetChildren()) do
-         local n = string.lower(val.Name)
-         if n:find("gold") or n:find("money") or n:find("cash") or n:find("g") then
-            val.Value = 999999
-         end
-      end
-   end
-end)
-
 -- ==========================================
--- ⚔️ TAB 2: WEAPONS CONTROLS
+-- ⚔️ TAB 2: WEAPONS & REAL GOLD
 -- ==========================================
-addButton(WeaponsScroll, "Unlock All Weapons", function()
+addButton(WeaponsScroll, "Unlock Weapon Profiles", function()
    local target = LP:FindFirstChild("Weapons") or LP:FindFirstChild("Items")
    local storage = game.ReplicatedStorage:FindFirstChild("Items") or game.ReplicatedStorage:FindFirstChild("Weapons")
    if target and storage then
@@ -199,17 +184,21 @@ addButton(WeaponsScroll, "Unlock All Weapons", function()
    end
 end)
 
-addButton(WeaponsScroll, "Sell Cards/Spells for Gold", function()
+addButton(WeaponsScroll, "SELL ALL CARDS (SERVER-SIDE GOLD)", function()
    local inv = LP:FindFirstChild("Cards")
-   if inv and #inv:GetChildren() > 0 then
-      game.ReplicatedStorage.SendServer.Sell:FireServer(inv:GetChildren(), "Cards")
+   if inv then
+      -- CRITICAL FIX: Loops and fires each object individually matching server parameters
+      for _, item in pairs(inv:GetChildren()) do
+         game.ReplicatedStorage.SendServer.Sell:FireServer(item, "Cards")
+         task.wait(0.1) -- Minimal network buffer delay
+      end
    end
 end)
 
 -- ==========================================
--- 🛡️ TAB 3: ARMOR CONTROLS
+-- 🛡️ TAB 3: ARMOR & REAL GOLD
 -- ==========================================
-addButton(ArmorScroll, "Unlock All Armor Types", function()
+addButton(ArmorScroll, "Unlock Armor Profiles", function()
    local target = LP:FindFirstChild("Armor")
    local storage = game.ReplicatedStorage:FindFirstChild("Armor")
    if target and storage then
@@ -228,17 +217,21 @@ addButton(ArmorScroll, "Unlock All Armor Types", function()
    end
 end)
 
-addButton(ArmorScroll, "Sell Armor for Gold", function()
+addButton(ArmorScroll, "SELL ALL ARMOR (SERVER-SIDE GOLD)", function()
    local inv = LP:FindFirstChild("Armor")
-   if inv and #inv:GetChildren() > 0 then
-      game.ReplicatedStorage.SendServer.Sell:FireServer(inv:GetChildren(), "Armor")
+   if inv then
+      -- CRITICAL FIX: Fires the remote passing single entities to credit real gold
+      for _, item in pairs(inv:GetChildren()) do
+         game.ReplicatedStorage.SendServer.Sell:FireServer(item, "Armor")
+         task.wait(0.1)
+      end
    end
 end)
 
 -- ==========================================
--- 🧪 TAB 4: ITEMS CONTROLS
+-- 🧪 TAB 4: ITEMS
 -- ==========================================
-addButton(ItemsScroll, "Unlock All Consumables & Tickets", function()
+addButton(ItemsScroll, "Unlock Consumable Profiles", function()
    local target = LP:FindFirstChild("Items")
    local storage = game.ReplicatedStorage:FindFirstChild("Items")
    if target and storage then
@@ -254,7 +247,7 @@ addButton(ItemsScroll, "Unlock All Consumables & Tickets", function()
 end)
 
 -- ==========================================
--- 🗂️ RENDER NAVIGATION CONTROLLER TABS
+-- 🗂️ RENDER TABS
 -- ==========================================
 local tabs = {"Stats", "Weapons", "Armor", "Items"}
 for i, name in pairs(tabs) do
