@@ -1,4 +1,4 @@
--- paste this into a LocalScript inside StarterPlayerScripts
+-- Paste this into your LocalScript inside StarterPlayerScripts
 local LP = game.Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
 
@@ -127,7 +127,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- ============================================================================
--- ⚙️ DESIGN GENERATORS (FIXED SCROLL WHEEL HOOKS)
+-- ⚙️ DESIGN GENERATORS (POINTERENTERED REMOVED COMPLETELY)
 -- ============================================================================
 local function addInputBox(parentScroll, placeholderText, assetSearchKeyword)
    local box = Instance.new("TextBox")
@@ -157,7 +157,7 @@ local function addInputBox(parentScroll, placeholderText, assetSearchKeyword)
       local currentIndex = 1
       box.Text = discoveredAssets[currentIndex]
 
-      -- FIXED: Uses direct Native Roblox MouseWheel UI Connections instead of PointerEntered
+      -- Directly hooks into the native mouse wheel events on the box
       box.MouseWheelForward:Connect(function()
          currentIndex = currentIndex - 1
          if currentIndex < 1 then currentIndex = #discoveredAssets end
