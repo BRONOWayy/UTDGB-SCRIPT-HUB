@@ -5,7 +5,7 @@ local PlayerGui = LP:WaitForChild("PlayerGui", 15)
 if PlayerGui:FindFirstChild("DeltaMasterUI") then PlayerGui.DeltaMasterUI:Destroy() end
 
 -- ============================================================================
--- 🛠️ FIXED BASE NATIVE GUI ENGINE
+-- 🛠️ BASE SCREEN ENGINE
 -- ============================================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "DeltaMasterUI"
@@ -41,7 +41,7 @@ local function createTabFrame(name)
    Scroll.Size = UDim2.new(1, 0, 1, 0)
    Scroll.BackgroundTransparency = 1
    Scroll.BorderSizePixel = 0
-   Scroll.CanvasSize = UDim2.new(0, 0, 0, 550)
+   Scroll.CanvasSize = UDim2.new(0, 0, 0, 1500) -- Massive canvas size to auto-scroll through all listed game items
    Scroll.ScrollBarThickness = 6
    Scroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 125)
    Scroll.Visible = false
@@ -62,7 +62,7 @@ local ArmorScroll = createTabFrame("Armor")
 local ItemsScroll = createTabFrame("Items")
 
 -- ============================================================================
--- 👋 100% FIXED DRAG ENGINE (NO MORE ENUM.USERINPUTTYPE ERRORS)
+-- 👋 100% FIXED DRAG HANDLER (TOUCH AND MOUSE REPOSITIONING)
 -- ============================================================================
 local UserInputService = game:GetService("UserInputService")
 local dragging, dragInput, dragStart, startPos
@@ -79,22 +79,19 @@ Main.InputBegan:Connect(function(input)
       startPos = Main.Position
       
       input.Changed:Connect(function()
-         if input.UserInputState == Enum.UserInputState.End then
-            dragging = false
-         end
+         if input.UserInputState == Enum.UserInputState.End then dragging = false end
       end)
    end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-   -- FIXED: Removed the invalid MouseBehavior check completely
    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
       update(input)
    end
 end)
 
 -- ============================================================================
--- ⚙️ DESIGN GENERATORS
+-- ⚙️ GENERATION ELEMENT TEMPLATES
 -- ============================================================================
 local function addInputBox(parentScroll, placeholderText)
    local box = Instance.new("TextBox")
@@ -111,10 +108,10 @@ local function addInputBox(parentScroll, placeholderText)
    return box
 end
 
-local function addButton(parentScroll, text, callback)
+local function addActionButton(parentScroll, text, color, callback)
    local btn = Instance.new("TextButton")
-   btn.Size = UDim2.new(1, -10, 0, 40)
-   btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+   btn.Size = UDim2.new(1, -10, 0, 35)
+   btn.BackgroundColor3 = color or Color3.fromRGB(50, 50, 55)
    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
    btn.Text = text
    btn.Font = Enum.Font.SourceSansBold
@@ -129,78 +126,72 @@ local function showTab(tabName)
 end
 
 -- ============================================================================
--- 📊 TAB 1: SERVER-SIDE STATS & GOLD
+-- 📊 TAB 1: STATS ENGINE (PERMANENT)
 -- ============================================================================
-local goldInput = addInputBox(StatsScroll, "Enter Permanent Gold Amount...")
-addButton(StatsScroll, "GIVE SERVER GOLD", function()
+local goldInput = addInputBox(StatsScroll, "Enter Permanent Gold Value...")
+addActionButton(StatsScroll, "SET GAME GOLD", Color3.fromRGB(218, 165, 32), function()
    local amt = tonumber(goldInput.Text) or 10000
    if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveStat") then
       game.ReplicatedStorage.SendServer.GiveStat:FireServer("Gold", amt)
    end
 end)
 
-local loveInput = addInputBox(StatsScroll, "Enter Permanent Love (LV) Level...")
-addButton(StatsScroll, "GIVE SERVER LOVE LEVELS", function()
+local loveInput = addInputBox(StatsScroll, "Enter Permanent Love (LV)...")
+addActionButton(StatsScroll, "SET GAME LOVE LEVEL", Color3.fromRGB(199, 21, 133), function()
    local amt = tonumber(loveInput.Text) or 20
    if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveStat") then
       game.ReplicatedStorage.SendServer.GiveStat:FireServer("Love", amt)
    end
 end)
 
-local xpInput = addInputBox(StatsScroll, "Enter Permanent XP Amount...")
-addButton(StatsScroll, "GIVE SERVER XP", function()
-   local amt = tonumber(xpInput.Text) or 500
-   if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("GiveStat") then
-      game.ReplicatedStorage.SendServer.GiveStat:FireServer("XP", amt)
-   end
-end)
-
 -- ============================================================================
--- ⚔️ TAB 2: WEAPONS
+-- ⚔️ TAB 2 & 3 & 4: DYNAMIC LIST SCANNERS (BUILDS EVERY ASSET SELECTION AUTOMATICALLY)
 -- ============================================================================
-local weaponNameInput = addInputBox(WeaponsScroll, "Enter Weapon Asset Name...")
-addButton(WeaponsScroll, "FORCE UNLOCK WEAPON (SERVER)", function()
-   local wName = weaponNameInput.Text
-   if wName ~= "" and game.ReplicatedStorage.SendServer:FindFirstChild("BuyWeapon") then
-      game.ReplicatedStorage.SendServer.BuyWeapon:FireServer(wName, 0)
-   end
-end)
+local globalQuantityInput = addInputBox(ItemsScroll, "Set Give Item Quantity Stack...")
 
-addButton(WeaponsScroll, "MAX LEVEL EQUIPPED WEAPON", function()
-   if game.ReplicatedStorage:FindFirstChild("RequestToLevelGear") then
-      for i = 1, 20 do
-         game.ReplicatedStorage.RequestToLevelGear:FireServer()
-         task.wait(0.05)
+local function populateListTab(parentScroll, storageFolderName, remoteName)
+   local folder = game.ReplicatedStorage:FindFirstChild(storageFolderName)
+   if folder then
+      for _, child in pairs(folder:GetChildren()) do
+         -- Generates an individual listing button labeled directly by the object name inside ReplicatedStorage
+         addActionButton(parentScroll, "Spawn: " .. child.Name, Color3.fromRGB(45, 45, 50), function()
+            local remote = game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild(remoteName)
+            if remote then
+               if remoteName == "GiveThing" then
+                  local qty = tonumber(globalQuantityInput.Text) or 1
+                  -- Safely passes the real asset file reference found by the list scraper
+                  remote:FireServer(child, qty)
+               else
+                  -- Standard BuyWeapon / BuyArmor exploit execution route (0 cost pass)
+                  remote:FireServer(child, 0)
+               end
+            end
+         end)
       end
    end
+end
+
+-- Instantly processes and displays the entire directory listings right on your scrollwheel windows
+populateListTab(WeaponsScroll, "Weapons", "BuyWeapon")
+populateListTab(WeaponsScroll, "Cards", "BuyCard")
+populateListTab(ArmorScroll, "Armor", "BuyArmor")
+populateListTab(ItemsScroll, "Items", "GiveThing")
+
+-- Adds standard structural utility buttons at the top of listings
+addActionButton(WeaponsScroll, "⚡ INSTANT MAX LEVEL EQUIPPED WEAPON ⚡", Color3.fromRGB(70, 130, 180), function()
+   if game.ReplicatedStorage:FindFirstChild("RequestToLevelGear") then
+      for i = 1, 20 do game.ReplicatedStorage.RequestToLevelGear:FireServer() task.wait(0.02) end
+   end
 end)
 
--- ============================================================================
--- 🛡️ TAB 3: ARMOR
--- ============================================================================
-local armorNameInput = addInputBox(ArmorScroll, "Enter Armor Asset Name...")
-addButton(ArmorScroll, "FORCE UNLOCK ARMOR (SERVER)", function()
-   local aName = armorNameInput.Text
-   if aName ~= "" and game.ReplicatedStorage.SendServer:FindFirstChild("BuyArmor") then
-      game.ReplicatedStorage.SendServer.BuyArmor:FireServer(aName, 0)
+addActionButton(ArmorScroll, "⚡ INSTANT MAX LEVEL EQUIPPED ARMOR ⚡", Color3.fromRGB(70, 130, 180), function()
+   if game.ReplicatedStorage:FindFirstChild("SendServer") and game.ReplicatedStorage.SendServer:FindFirstChild("UpgradeArmor") then
+      for i = 1, 20 do game.ReplicatedStorage.SendServer.UpgradeArmor:FireServer() task.wait(0.02) end
    end
 end)
 
 -- ============================================================================
--- 🧪 TAB 4: PERMANENT ITEMS GIVER (GIVETHING NODE FIXED)
--- ============================================================================
-local itemInput = addInputBox(ItemsScroll, "Enter Ticket / Item Asset Name...")
-local itemAmtInput = addInputBox(ItemsScroll, "Enter Quantity Amount...")
-addButton(ItemsScroll, "GIVE REAL PERMANENT ITEM", function()
-   local itemName = itemInput.Text
-   local amt = tonumber(itemAmtInput.Text) or 1
-   if itemName ~= "" and game.ReplicatedStorage.SendServer:FindFirstChild("GiveThing") then
-      game.ReplicatedStorage.SendServer.GiveThing:FireServer(itemName, amt)
-   end
-end)
-
--- ============================================================================
--- 🗂️ RENDER NAVIGATION TABS
+-- 🗂️ SIDEBAR SELECTION SYSTEM
 -- ============================================================================
 local tabs = {"Stats", "Weapons", "Armor", "Items"}
 for i, name in pairs(tabs) do
