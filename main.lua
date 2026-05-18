@@ -1,10 +1,8 @@
 local LP = game.Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
 
--- Clean up any previous instances of this script to avoid visual overlapping
 if PlayerGui:FindFirstChild("DeltaCustomUI") then PlayerGui.DeltaCustomUI:Destroy() end
 
--- Helper function to safely locate PlayerStats wherever the game scripts map it
 local function getStats()
    local c = LP.Character
    return (c and c:FindFirstChild("Head") and c.Head:FindFirstChild("PlayerStats")) or LP:FindFirstChild("PlayerStats")
@@ -18,7 +16,6 @@ ScreenGui.Name = "DeltaCustomUI"
 ScreenGui.Parent = PlayerGui
 ScreenGui.ResetOnSpawn = false
 
--- Main Drag Container Panel (Fixed dimensions, clean theme)
 local Main = Instance.new("Frame")
 Main.Name = "MainWindow"
 Main.Size = UDim2.new(0, 480, 0, 300)
@@ -29,40 +26,49 @@ Main.BorderColor3 = Color3.fromRGB(70, 70, 75)
 Main.Active = true
 Main.Parent = ScreenGui
 
--- Tab Navigation Sidebar Panel (Left Side)
 local Nav = Instance.new("Frame")
 Nav.Size = UDim2.new(0, 110, 1, 0)
 Nav.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 Nav.BorderSizePixel = 0
 Nav.Parent = Main
 
--- Content Output Display Panel (Right Side)
 local Content = Instance.new("Frame")
 Content.Size = UDim2.new(1, -120, 1, -10)
 Content.Position = UDim2.new(0, 115, 0, 5)
 Content.BackgroundTransparency = 1
 Content.Parent = Main
 
--- Scroll Wheel Frame (Handles vertical overflowing)
-local Scroll = Instance.new("ScrollingFrame")
-Scroll.Size = UDim2.new(1, 0, 1, 0)
-Scroll.BackgroundTransparency = 1
-Scroll.BorderSizePixel = 0
-Scroll.CanvasSize = UDim2.new(0, 0, 0, 450) -- Dynamic height capacity
-Scroll.ScrollBarThickness = 6
-Scroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
-Scroll.Parent = Content
+-- Active View Tab Tracking Table
+local TabFrames = {}
 
-local Layout = Instance.new("UIListLayout")
-Layout.Padding = UDim.new(0, 6)
-Layout.SortOrder = Enum.SortOrder.LayoutOrder
-Layout.Parent = Scroll
+-- Function to safely generate a scrolling canvas layout for each tab layer
+local function createTabFrame(name)
+   local Scroll = Instance.new("ScrollingFrame")
+   Scroll.Size = UDim2.new(1, 0, 1, 0)
+   Scroll.BackgroundTransparency = 1
+   Scroll.BorderSizePixel = 0
+   Scroll.CanvasSize = UDim2.new(0, 0, 0, 500)
+   Scroll.ScrollBarThickness = 6
+   Scroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 105)
+   Scroll.Visible = false
+   Scroll.Parent = Content
 
--- Core interaction tables mapped by tab context
-local TabData = {Stats = {}, Weapons = {}, Armor = {}, Items = {}}
+   local Layout = Instance.new("UIListLayout")
+   Layout.Padding = UDim.new(0, 6)
+   Layout.SortOrder = Enum.SortOrder.LayoutOrder
+   Layout.Parent = Scroll
+   
+   TabFrames[name] = Scroll
+   return Scroll
+end
+
+local StatsScroll = createTabFrame("Stats")
+local WeaponsScroll = createTabFrame("Weapons")
+local ArmorScroll = createTabFrame("Armor")
+local ItemsScroll = createTabFrame("Items")
 
 -- ==========================================
--- 👋 CUSTOM ACTIVE DRAG HANDLER SCRIPT
+-- 👋 ACTIVE DRAG HANDLER SCRIPT
 -- ==========================================
 local UserInputService = game:GetService("UserInputService")
 local dragging, dragInput, dragStart, startPos
@@ -77,11 +83,8 @@ Main.InputBegan:Connect(function(input)
       dragging = true
       dragStart = input.Position
       startPos = Main.Position
-      
       input.Changed:Connect(function()
-         if input.UserInputState == Enum.UserInputState.End then
-            dragging = false
-         end
+         if input.UserInputState == Enum.UserInputState.End then dragging = false end
       end)
    end
 end)
@@ -93,15 +96,13 @@ Main.InputChanged:Connect(function(input)
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-   if input == dragInput and dragging then
-      update(input)
-   end
+   if input == dragInput and dragging then update(input) end
 end)
 
 -- ==========================================
--- 🛠️ UI CONTROL MAKERS
+-- 🛠️ BUTTON ELEMENT CONSTRUCTORS
 -- ==========================================
-local function addToggle(tab, text, callback)
+local function addToggle(parentScroll, text, callback)
    local btn = Instance.new("TextButton")
    btn.Size = UDim2.new(1, -10, 0, 40)
    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
@@ -110,6 +111,7 @@ local function addToggle(tab, text, callback)
    btn.Font = Enum.Font.SourceSansBold
    btn.TextSize = 15
    btn.BorderSizePixel = 0
+   btn.Parent = parentScroll
    
    local state = false
    btn.MouseButton1Click:Connect(function()
@@ -118,10 +120,9 @@ local function addToggle(tab, text, callback)
       btn.TextColor3 = state and Color3.fromRGB(60, 220, 60) or Color3.fromRGB(220, 60, 60)
       callback(state)
    end)
-   table.insert(TabData[tab], btn)
 end
 
-local function addButton(tab, text, callback)
+local function addButton(parentScroll, text, callback)
    local btn = Instance.new("TextButton")
    btn.Size = UDim2.new(1, -10, 0, 40)
    btn.BackgroundColor3 = Color3.fromRGB(55, 55, 60)
@@ -130,24 +131,20 @@ local function addButton(tab, text, callback)
    btn.Font = Enum.Font.SourceSans
    btn.TextSize = 14
    btn.BorderSizePixel = 0
+   btn.Parent = parentScroll
    btn.MouseButton1Click:Connect(callback)
-   table.insert(TabData[tab], btn)
 end
 
 local function showTab(tabName)
-   -- Clear layout tree while tracking structural layout anchors
-   for _, child in pairs(Scroll:GetChildren()) do
-      if child:IsA("TextButton") then child:Destroy() end
-   end
-   for _, element in pairs(TabData[tabName]) do
-      element.Parent = Scroll
+   for name, frame in pairs(TabFrames) do
+      frame.Visible = (name == tabName)
    end
 end
 
 -- ==========================================
--- 📊 TAB 1: STATS DATA
+-- 📊 TAB 1: STATS & GOLD CONTROLS
 -- ==========================================
-addToggle("Stats", "Auto Farm Love", function(state)
+addToggle(StatsScroll, "Auto Farm Love", function(state)
    _G.AutoLoveFarm = state
    task.spawn(function()
       while _G.AutoLoveFarm do
@@ -160,17 +157,30 @@ addToggle("Stats", "Auto Farm Love", function(state)
    end)
 end)
 
-addButton("Stats", "Instantly Max XP Bar", function()
+addButton(StatsScroll, "Instantly Max XP Bar", function()
    local stats = getStats()
    if stats and stats:FindFirstChild("XP") and stats:FindFirstChild("Max") then
       stats.XP.Value = stats.Max.Value
    end
 end)
 
+-- The Gold generation functions you requested
+addButton(StatsScroll, "Spoof Max Gold (Local-Visual)", function()
+   local stats = getStats()
+   if stats then
+      for _, val in pairs(stats:GetChildren()) do
+         local n = string.lower(val.Name)
+         if n:find("gold") or n:find("money") or n:find("cash") or n:find("g") then
+            val.Value = 999999
+         end
+      end
+   end
+end)
+
 -- ==========================================
--- ⚔️ TAB 2: WEAPONS DATA
+-- ⚔️ TAB 2: WEAPONS CONTROLS
 -- ==========================================
-addButton("Weapons", "Unlock All Weapons", function()
+addButton(WeaponsScroll, "Unlock All Weapons", function()
    local target = LP:FindFirstChild("Weapons") or LP:FindFirstChild("Items")
    local storage = game.ReplicatedStorage:FindFirstChild("Items") or game.ReplicatedStorage:FindFirstChild("Weapons")
    if target and storage then
@@ -189,7 +199,7 @@ addButton("Weapons", "Unlock All Weapons", function()
    end
 end)
 
-addButton("Weapons", "Sell Cards/Spells (Gold)", function()
+addButton(WeaponsScroll, "Sell Cards/Spells for Gold", function()
    local inv = LP:FindFirstChild("Cards")
    if inv and #inv:GetChildren() > 0 then
       game.ReplicatedStorage.SendServer.Sell:FireServer(inv:GetChildren(), "Cards")
@@ -197,9 +207,9 @@ addButton("Weapons", "Sell Cards/Spells (Gold)", function()
 end)
 
 -- ==========================================
--- 🛡️ TAB 3: ARMOR DATA
+-- 🛡️ TAB 3: ARMOR CONTROLS
 -- ==========================================
-addButton("Armor", "Unlock All Armor Types", function()
+addButton(ArmorScroll, "Unlock All Armor Types", function()
    local target = LP:FindFirstChild("Armor")
    local storage = game.ReplicatedStorage:FindFirstChild("Armor")
    if target and storage then
@@ -218,7 +228,7 @@ addButton("Armor", "Unlock All Armor Types", function()
    end
 end)
 
-addButton("Armor", "Sell Armor Inventory (Gold)", function()
+addButton(ArmorScroll, "Sell Armor for Gold", function()
    local inv = LP:FindFirstChild("Armor")
    if inv and #inv:GetChildren() > 0 then
       game.ReplicatedStorage.SendServer.Sell:FireServer(inv:GetChildren(), "Armor")
@@ -226,9 +236,9 @@ addButton("Armor", "Sell Armor Inventory (Gold)", function()
 end)
 
 -- ==========================================
--- 🧪 TAB 4: ITEMS DATA
+-- 🧪 TAB 4: ITEMS CONTROLS
 -- ==========================================
-addButton("Items", "Unlock All Consumables & Tickets", function()
+addButton(ItemsScroll, "Unlock All Consumables & Tickets", function()
    local target = LP:FindFirstChild("Items")
    local storage = game.ReplicatedStorage:FindFirstChild("Items")
    if target and storage then
@@ -244,7 +254,7 @@ addButton("Items", "Unlock All Consumables & Tickets", function()
 end)
 
 -- ==========================================
--- 🗂️ DRAW NAVIGATION TABS
+-- 🗂️ RENDER NAVIGATION CONTROLLER TABS
 -- ==========================================
 local tabs = {"Stats", "Weapons", "Armor", "Items"}
 for i, name in pairs(tabs) do
@@ -264,5 +274,4 @@ for i, name in pairs(tabs) do
    end)
 end
 
--- Force load the default Tab content layout engine
 showTab("Stats")
