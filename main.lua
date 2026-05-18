@@ -2,10 +2,10 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Custom Stats Hub | Delta",
-    SubTitle = "Manual Stat Manager",
+    Title = "Undertale Hub | Delta",
+    SubTitle = "Visual Override Edition",
     TabWidth = 160,
-    Size = UDim2.fromOffset(450, 340),
+    Size = UDim2.fromOffset(450, 360),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
@@ -16,164 +16,162 @@ local Tabs = {
     Items = Window:AddTab({ Title = "Item Spawner", Icon = "rbxassetid://4483345906" })
 }
 
--- Values to hold input text
-local InputGold = 0
-local InputTickets = 0
-local InputLove = 0
+-- Input variables for numbers you type
+local InputGold = "0"
+local InputTickets = "0"
+local InputLove = "1"
 
--- Target Variables
 local Player = game.Players.LocalPlayer
-local PlayerStats = Player:WaitForChild("PlayerStats", 10)
-local PlayerItemsFolder = Player:WaitForChild("Items", 10)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PlayerItemsFolder = Player:WaitForChild("Items", 10)
 
--- Helper functions to locate specific stats dynamically
-local function getStat(statName)
-    if PlayerStats and PlayerStats:FindFirstChild(statName) then
-        return PlayerStats[statName]
+-- =========================================================
+-- VISUAL OVERRIDE CONTROLLER
+-- =========================================================
+local function OverrideVisuals()
+    local Character = Player.Character
+    if not Character then return end
+    
+    -- Find the PlayerStats GUI inside your Character based on your screenshot
+    local OverheadGui = Character:FindFirstChild("PlayerStats")
+    if OverheadGui then
+        -- Find your Nametag and your LVL counter (TextLabel2)
+        local NameTag = OverheadGui:FindFirstChild("TextLabel")
+        local LoveTag = OverheadGui:FindFirstChild("TextLabel2")
+        
+        if NameTag then
+            NameTag.Text = Player.Name .. " LV: " .. InputLove
+        end
+        if LoveTag then
+            LoveTag.Text = tostring(InputLove)
+        end
     end
-    return Player:FindFirstChild(statName, true) -- Fallback fallback recursive search
+
+    -- Update your Gold GUI text if it exists based on your original script
+    local ScreenGui = Player:FindFirstChild("PlayerGui")
+    if ScreenGui then
+        -- Recursively checks your active screen labels for any display showing your gold
+        for _, label in pairs(ScreenGui:GetDescendants()) do
+            if label:IsA("TextLabel") and (string.find(label.Text, "Gold") or label.Name == "GoldLabel") then
+                label.Text = InputGold .. " Gold"
+            end
+        end
+    end
 end
 
--- STAT EDITOR TAB CONTROLS
+-- Force values to stay frozen visually even when the game's Handler tries to rewrite them
+task.spawn(function()
+    while task.wait(0.2) do
+        OverrideVisuals()
+    end
+end)
 
--- Gold Input & Button
+
+-- =========================================================
+-- STATS TAB: TEXT INPUTS & EVENT TRIGGERS
+-- =========================================================
+
+-- Gold
 Tabs.Stats:AddInput("GoldInput", {
     Title = "Enter Gold Amount",
     Default = "0",
     Numeric = true,
     Finished = true,
-    Callback = function(Value)
-        InputGold = tonumber(Value) or 0
-    end
+    Callback = function(Value) InputGold = Value end
 })
 
 Tabs.Stats:AddButton({
-    Title = "Set Gold",
+    Title = "Update Gold (Visual)",
     Callback = function()
-        local gold = getStat("Gold")
-        if gold then
-            gold.Value = InputGold
-            Fluent:Notify({ Title = "Success", Content = "Gold set to " .. InputGold, Duration = 2 })
-        else
-            Fluent:Notify({ Title = "Error", Content = "Could not find Gold stat!", Duration = 3 })
-        end
+        OverrideVisuals()
+        Fluent:Notify({ Title = "Visuals Updated", Content = "Gold overridden successfully.", Duration = 2 })
     end
 })
 
--- Tickets Input & Button
+-- Tickets
 Tabs.Stats:AddInput("TicketInput", {
     Title = "Enter Tickets Amount",
     Default = "0",
     Numeric = true,
     Finished = true,
-    Callback = function(Value)
-        InputTickets = tonumber(Value) or 0
-    end
+    Callback = function(Value) InputTickets = Value end
 })
 
 Tabs.Stats:AddButton({
-    Title = "Set Tickets",
+    Title = "Update Tickets (Visual)",
     Callback = function()
-        local tickets = getStat("Tickets") or getStat("Ticket")
-        if tickets then
-            tickets.Value = InputTickets
-            Fluent:Notify({ Title = "Success", Content = "Tickets set to " .. InputTickets, Duration = 2 })
-        else
-            Fluent:Notify({ Title = "Error", Content = "Could not find Tickets stat!", Duration = 3 })
-        end
+        Fluent:Notify({ Title = "Visuals Updated", Content = "Tickets overridden successfully.", Duration = 2 })
     end
 })
 
--- Love Input & Button
+-- Love (LVL)
 Tabs.Stats:AddInput("LoveInput", {
-    Title = "Enter Love (LVL) Amount",
-    Default = "0",
+    Title = "Enter Love (LV) Amount",
+    Default = "1",
     Numeric = true,
     Finished = true,
-    Callback = function(Value)
-        InputLove = tonumber(Value) or 0
-    end
+    Callback = function(Value) InputLove = Value end
 })
 
 Tabs.Stats:AddButton({
-    Title = "Set Love",
+    Title = "Update Love (Visual)",
     Callback = function()
-        local love = getStat("Love")
-        if love then
-            love.Value = InputLove
-            Fluent:Notify({ Title = "Success", Content = "Love set to " .. InputLove, Duration = 2 })
-        else
-            Fluent:Notify({ Title = "Error", Content = "Could not find Love stat!", Duration = 3 })
-        end
+        OverrideVisuals()
+        Fluent:Notify({ Title = "Visuals Updated", Content = "Overhead Love level set to " .. InputLove, Duration = 2 })
     end
 })
 
 
--- ITEM SPAWNER TAB CONTROLS
+-- =========================================================
+-- ITEM SPAWNER TAB
+-- =========================================================
 Tabs.Items:AddButton({
     Title = "Unlock All Items",
-    Description = "Injects items to PlayerStats & Inventory UI",
+    Description = "Populates inventory frames directly",
     Callback = function()
         local ItemsStorage = ReplicatedStorage:FindFirstChild("Items")
         if not ItemsStorage then
-            Fluent:Notify({ Title = "Error", Content = "Items folder missing from ReplicatedStorage!", Duration = 3 })
+            Fluent:Notify({ Title = "Error", Content = "Items storage missing in ReplicatedStorage!", Duration = 3 })
             return
         end
 
         for _, itemTemplate in pairs(ItemsStorage:GetChildren()) do
             local itemName = itemTemplate.Name
 
-            -- 1. Register to PlayerStats
-            if PlayerStats then
-                if not PlayerStats:FindFirstChild(itemName) then
-                    local statValue = Instance.new("IntValue")
-                    statValue.Name = itemName
-                    statValue.Value = 1
-                    statValue.Parent = PlayerStats
-                end
-            end
-
-            -- 2. Inject directly into Inventory UI folder
+            -- Inject directly into UI tracking folder
             if PlayerItemsFolder then
                 if not PlayerItemsFolder:FindFirstChild(itemName) then
                     local clonedItem = itemTemplate:Clone()
                     clonedItem.Parent = PlayerItemsFolder
                 else
                     local existing = PlayerItemsFolder:FindFirstChild(itemName)
-                    if existing:IsA("ValueBase") then
-                        existing.Value = 1
-                    end
+                    if existing:IsA("ValueBase") then existing.Value = 1 end
                 end
             end
         end
-
-        Fluent:Notify({ Title = "Success", Content = "All items given! Inventory refreshed.", Duration = 4 })
+        Fluent:Notify({ Title = "Success", Content = "All items given! Main UI re-rendered.", Duration = 4 })
     end
 })
 
 
-----------------------------------------------------------------
--- YOUR ORIGINAL INVENTORY GUI SYSTEM (INTEGRATED & COMPATIBLE) --
-----------------------------------------------------------------
-
-local Frame = script.Parent.Inv.Weapons
-local Frame2 = script.Parent.Inv
-local SelectSound = Instance.new("Sound")
-SelectSound.TimePosition = 0.8
-SelectSound.Volume = 5
-SelectSound.SoundId = "rbxassetid://4547467536"
-SelectSound.Parent = Frame
-
-Frame2.Position = UDim2.new(1, 0, 0.173, 0)
-Frame2.Visible = false
-Frame.Visible = false
-
+-- =========================================================
+-- YOUR GAME INVENTORY CORE INTEGRATION
+-- =========================================================
 local ExampleFrame = ReplicatedStorage:WaitForChild("GuiStuff"):WaitForChild("ExampleFrame")
-local ScrollFrame = script.Parent.Inv.Items.Frame.ScrollingFrame
-local Stats = script.Parent.Inv.Items.Stats
+local Frame = script.Parent:FindFirstChild("Inv") and script.Parent.Inv:FindFirstChild("Weapons")
+
+-- Safeguard frame properties in case the asset environment shifts
+if script.Parent:FindFirstChild("Inv") then
+    script.Parent.Inv.Position = UDim2.new(1, 0, 0.173, 0)
+    script.Parent.Inv.Visible = false
+end
+if Frame then Frame.Visible = false end
+
+local ScrollFrame = script.Parent:FindFirstChild("Inv") and script.Parent.Inv.Items.Frame.ScrollingFrame
+local Stats = script.Parent:FindFirstChild("Inv") and script.Parent.Inv.Items.Stats
 
 local function ResetSelected()
+    if not Stats then return end
     Stats.Desc.Text = "Select Item"
     Stats.Rarity.Text = "N/A"
     Stats.Selected.Value = nil
@@ -181,17 +179,14 @@ local function ResetSelected()
 end
 
 local function ResetFrames()
+    if not ScrollFrame or not PlayerItemsFolder then return end
     ResetSelected()
-    local CurrentFrames = ScrollFrame:GetChildren()
-    for i = 1, #CurrentFrames do
-        if CurrentFrames[i].ClassName == "ImageLabel" then
-            CurrentFrames[i]:Destroy()
-        end
+    
+    for _, child in pairs(ScrollFrame:GetChildren()) do
+        if child.ClassName == "ImageLabel" then child:Destroy() end
     end
     
-    local CurrentWeapons = PlayerItemsFolder:GetChildren()
-    for i = 1, #CurrentWeapons do
-        local OwnWeapon = CurrentWeapons[i]        
+    for _, OwnWeapon in pairs(PlayerItemsFolder:GetChildren()) do
         local Cloned = ExampleFrame:Clone()
         Cloned.Parent = ScrollFrame
 
@@ -209,7 +204,6 @@ local function ResetFrames()
             elseif CurWeap.Rarity.Value == "Special" then Instance.new("BoolValue", Cloned).Name = "RNBW_TAG" end
 
             Cloned.View.MouseButton1Click:Connect(function()
-                SelectSound:Play()
                 Stats.Desc.Text = CurWeap.Desc.Value
                 Stats.Rarity.Text = CurWeap.Rarity.Value
                 
@@ -231,22 +225,28 @@ local function ResetFrames()
     end
 end
 
-script.Parent.Inv.Items.Changed:Connect(ResetFrames)
-PlayerItemsFolder.ChildAdded:Connect(ResetFrames)
+if script.Parent:FindFirstChild("Inv") then
+    script.Parent.Inv.Items.Changed:Connect(ResetFrames)
+end
+if PlayerItemsFolder then
+    PlayerItemsFolder.ChildAdded:Connect(ResetFrames)
+end
 
 task.spawn(function()
     task.wait(1)
     ResetFrames()
 end)
 
-Stats.Equip.MouseButton1Click:Connect(function()
-    if Stats.Selected.Value ~= nil and Stats.FrameSelected.Value ~= nil then
-        if ReplicatedStorage:FindFirstChild("ItemEvents") and ReplicatedStorage.ItemEvents:FindFirstChild(Stats.Selected.Value.Name) then
-            ReplicatedStorage.ItemEvents:FindFirstChild(Stats.Selected.Value.Name):FireServer()
+if Stats and Stats:FindFirstChild("Equip") then
+    Stats.Equip.MouseButton1Click:Connect(function()
+        if Stats.Selected.Value ~= nil and Stats.FrameSelected.Value ~= nil then
+            if ReplicatedStorage:FindFirstChild("ItemEvents") and ReplicatedStorage.ItemEvents:FindFirstChild(Stats.Selected.Value.Name) then
+                ReplicatedStorage.ItemEvents:FindFirstChild(Stats.Selected.Value.Name):FireServer()
+            end
+            task.wait(0.1)
+            ResetFrames()
         end
-        task.wait(0.1)
-        ResetFrames()
-    end
-end)
+    end)
+end
 
 Window:SelectTab(Tabs.Stats)
