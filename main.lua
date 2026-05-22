@@ -8,13 +8,15 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
+-- Build Tracking Manifest
+local SCRIPT_VERSION = "1.0.1"
+
 ---------------------------------------------------------
 -- 1. REMOTE EVENT NETWORK SCANNER
 ---------------------------------------------------------
 local AttackRemote = nil
 
 local function scanForAttackRemotes()
-    -- Look for standard attack/damage remotes in common locations
     local targets = {"LeftClick", "Attack", "Action", "Hit", "Swing", "Use"}
     local descendants = game:GetDescendants()
     
@@ -34,7 +36,7 @@ end
 scanForAttackRemotes()
 
 ---------------------------------------------------------
--- 2. INTERFACE CONSTRUCTOR (Plain Theme)
+-- 2. INTERFACE CONSTRUCTOR (Versioned Theme)
 ---------------------------------------------------------
 if CoreGui:FindFirstChild("DeltaWeaponFirePanel") then
     CoreGui.DeltaWeaponFirePanel:Destroy()
@@ -64,7 +66,7 @@ MovingThing.BorderColor3 = Color3.fromRGB(60, 60, 60)
 MovingThing.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -10, 1, 0)
+Title.Size = UDim2.new(1, -60, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
 Title.Text = "Network Weapon Trigger"
@@ -73,6 +75,18 @@ Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MovingThing
+
+-- Formal Build Version Identifier Label
+local VerLabel = Instance.new("TextLabel")
+VerLabel.Size = UDim2.new(0, 50, 1, 0)
+VerLabel.Position = UDim2.new(1, -55, 0, 0)
+VerLabel.BackgroundTransparency = 1
+VerLabel.Text = "v" .. SCRIPT_VERSION
+VerLabel.TextColor3 = Color3.fromRGB(130, 130, 130)
+VerLabel.Font = Enum.Font.SourceSansItalic
+VerLabel.TextSize = 12
+VerLabel.TextXAlignment = Enum.TextXAlignment.Right
+VerLabel.Parent = MovingThing
 
 -- Drag Handler
 local dragging, dragInput, dragStart, startPos
@@ -150,7 +164,7 @@ local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -14, 0, 25)
 StatusLabel.Position = UDim2.new(0, 7, 0, 85)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: Monitoring equipped weapons..."
+StatusLabel.Text = "Status: Idle (System Armed)"
 StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
 StatusLabel.Font = Enum.Font.SourceSansItalic
 StatusLabel.TextSize = 12
@@ -168,26 +182,23 @@ RunService.Heartbeat:Connect(function()
         local activeTool = character:FindFirstChildOfClass("Tool")
         
         if activeTool then
-            -- Attempt 1: Fire the tool's internal execution engine directly 
             if activeTool:FindFirstChild("RemoteEvent") then
                 activeTool.RemoteEvent:FireServer()
-                StatusLabel.Text = "Bypassing delays via Tool RemoteEvent..."
+                StatusLabel.Text = "Fired Tool Internal RemoteEvent..."
             elseif activeTool:FindFirstChild("Activated") then
                 activeTool:Activate()
-                StatusLabel.Text = "Forcing activation hook on " .. activeTool.Name
+                StatusLabel.Text = "Invoked activation signal hook"
             else
-                -- Attempt 2: Use global game network pipeline mapping
                 if not AttackRemote then
                     scanForAttackRemotes()
                 end
                 
                 if AttackRemote then
                     AttackRemote:FireServer(activeTool.Name)
-                    StatusLabel.Text = "Routing execution through global pipeline..."
+                    StatusLabel.Text = "Routed signal through global network..."
                 else
-                    -- Fallback: Directly invoke default animation activation
                     activeTool:Activate()
-                    StatusLabel.Text = "Spamming default weapon input triggers..."
+                    StatusLabel.Text = "Simulating click inputs..."
                 end
             end
         else
