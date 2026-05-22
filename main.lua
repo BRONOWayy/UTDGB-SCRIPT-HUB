@@ -138,7 +138,7 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 StatusLabel.Parent = MainFrame
 
 ---------------------------------------------------------
--- 2. ANIMATION CANCELLER & VALUE RESET pipeline
+-- 2. ANIMATION CANCELLER & VALUE RESET PIPELINE
 ---------------------------------------------------------
 RunService.Heartbeat:Connect(function()
     local character = Player.Character
