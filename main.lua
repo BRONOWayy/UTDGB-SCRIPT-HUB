@@ -5,28 +5,16 @@ end
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Player = Players.LocalPlayer
 
 -- Build Tracking Manifest
-local SCRIPT_VERSION = "1.0.8-Universal"
+local SCRIPT_VERSION = "1.1.1-Multicaster"
 
 ---------------------------------------------------------
--- 1. CLEAN RESET OF ALL PREVIOUS INSTANCES
+-- 1. STUBBORN STORAGE PURGE
 ---------------------------------------------------------
-local oldPanels = {
-    "DeltaGlobalM1Panel",
-    "DeltaNumberValuePanel",
-    "DeltaLagFreePanel",
-    "DeltaZeroLagPanel",
-    "DeltaSelectorPanel",
-    "DeltaWeaponFirePanel",
-    "DeltaInterceptorPanel",
-    "DeltaCancelPanel",
-    "DeltaFixedCancelPanel",
-    "DeltaHyperV6Panel"
-}
-
+local oldPanels = {"DeltaUniversalV8Panel", "DeltaSignalV9Panel", "DeltaCancelPanel", "DeltaHyperV6Panel", "DeltaRemoteV10Panel"}
 for _, panelName in ipairs(oldPanels) do
     pcall(function()
         if CoreGui:FindFirstChild(panelName) then CoreGui[panelName]:Destroy() end
@@ -35,24 +23,26 @@ for _, panelName in ipairs(oldPanels) do
 end
 
 ---------------------------------------------------------
--- 2. UNIVERSAL COMPATIBILITY INTERFACE
+-- 2. DYNAMIC INTERFACE CONSTRUCTOR
 ---------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DeltaUniversalV8Panel"
+ScreenGui.Name = "DeltaMultiCastPanel"
 ScreenGui.ResetOnSpawn = false
 
 local attached, _ = pcall(function() ScreenGui.Parent = CoreGui end)
 if not attached then ScreenGui.Parent = Player:WaitForChild("PlayerGui") end
 
+-- Main Window Frame
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 280, 0, 130)
-MainFrame.Position = UDim2.new(0.2, 0, 0.3, 0)
+MainFrame.Size = UDim2.new(0, 300, 0, 240)
+MainFrame.Position = UDim2.new(0.2, 0, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 1
 MainFrame.BorderColor3 = Color3.fromRGB(55, 55, 55)
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
 
+-- Drag Bar
 local MovingThing = Instance.new("Frame")
 MovingThing.Size = UDim2.new(1, 0, 0, 30)
 MovingThing.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
@@ -64,7 +54,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -60, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Universal Weapon System"
+Title.Text = "Multi-Spell Casting Matrix"
 Title.TextColor3 = Color3.fromRGB(240, 240, 240)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
@@ -72,17 +62,17 @@ Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MovingThing
 
 local VerLabel = Instance.new("TextLabel")
-VerLabel.Size = UDim2.new(0, 80, 1, 0)
-VerLabel.Position = UDim2.new(1, -85, 0, 0)
+VerLabel.Size = UDim2.new(0, 50, 1, 0)
+VerLabel.Position = UDim2.new(1, -55, 0, 0)
 VerLabel.BackgroundTransparency = 1
 VerLabel.Text = "v" .. SCRIPT_VERSION
-VerLabel.TextColor3 = Color3.fromRGB(0, 220, 255) -- Cyan indicator for pure compatibility
+VerLabel.TextColor3 = Color3.fromRGB(180, 100, 255)
 VerLabel.Font = Enum.Font.SourceSansBold
-VerLabel.TextSize = 11
+VerLabel.TextSize = 10
 VerLabel.TextXAlignment = Enum.TextXAlignment.Right
 VerLabel.Parent = MovingThing
 
--- Simple Drag Handler
+-- Dragging Scripts
 local dragging, dragInput, dragStart, startPos
 MovingThing.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -94,13 +84,9 @@ MovingThing.InputBegan:Connect(function(input)
         end)
     end
 end)
-
 MovingThing.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
@@ -108,103 +94,138 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle Options
-local ModeFrame = Instance.new("Frame")
-ModeFrame.Size = UDim2.new(1, -14, 0, 35)
-ModeFrame.Position = UDim2.new(0, 7, 0, 42)
-ModeFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ModeFrame.BorderColor3 = Color3.fromRGB(45, 45, 45)
-ModeFrame.Parent = MainFrame
+-- Scrolling Selection Container
+local ScrollList = Instance.new("ScrollingFrame")
+ScrollList.Size = UDim2.new(1, -14, 0, 110)
+ScrollList.Position = UDim2.new(0, 7, 0, 38)
+ScrollList.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ScrollList.BorderColor3 = Color3.fromRGB(45, 45, 45)
+ScrollList.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollList.ScrollBarThickness = 6
+ScrollList.Parent = MainFrame
 
-local ModeLabel = Instance.new("TextLabel")
-ModeLabel.Size = UDim2.new(0, 160, 1, 0)
-ModeLabel.Position = UDim2.new(0, 8, 0, 0)
-ModeLabel.BackgroundTransparency = 1
-ModeLabel.Text = "Zero-Interval Fire Mode:"
-ModeLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-ModeLabel.Font = Enum.Font.SourceSans
-ModeLabel.TextSize = 13
-ModeLabel.TextXAlignment = Enum.TextXAlignment.Left
-ModeLabel.Parent = ModeFrame
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 2)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Parent = ScrollList
 
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 80, 0.7, 0)
-ToggleBtn.Position = UDim2.new(1, -88, 0, 5)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleBtn.BorderColor3 = Color3.fromRGB(50, 50, 50)
-ToggleBtn.Text = "OFF"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.TextSize = 13
-ToggleBtn.Parent = ModeFrame
+-- Control Configurations Panel Frame
+local ControlFrame = Instance.new("Frame")
+ControlFrame.Size = UDim2.new(1, -14, 0, 40)
+ControlFrame.Position = UDim2.new(0, 7, 0, 154)
+ControlFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ControlFrame.BorderColor3 = Color3.fromRGB(45, 45, 45)
+ControlFrame.Parent = MainFrame
 
-local SystemActive = false
-ToggleBtn.MouseButton1Click:Connect(function()
-    SystemActive = not SystemActive
-    ToggleBtn.Text = SystemActive and "ON" or "OFF"
-    ToggleBtn.BackgroundColor3 = SystemActive and Color3.fromRGB(40, 60, 80) or Color3.fromRGB(20, 20, 20)
-end)
+-- Delay Control Textbox
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(0, 65, 1, 0)
+SpeedLabel.Position = UDim2.new(0, 5, 0, 0)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "Delay (sec):"
+SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+SpeedLabel.Font = Enum.Font.SourceSans
+SpeedLabel.TextSize = 13
+SpeedLabel.Parent = ControlFrame
 
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, -14, 0, 25)
-StatusLabel.Position = UDim2.new(0, 7, 0, 90)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Universal build loaded without experimental hooks."
-StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-StatusLabel.Font = Enum.Font.SourceSansItalic
-StatusLabel.TextSize = 12
-StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
-StatusLabel.Parent = MainFrame
+local DelayInput = Instance.new("TextBox")
+DelayInput.Size = UDim2.new(0, 50, 0.6, 0)
+DelayInput.Position = UDim2.new(0, 70, 0, 8)
+DelayInput.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+DelayInput.BorderColor3 = Color3.fromRGB(50, 50, 50)
+DelayInput.Text = "0.1"
+DelayInput.TextColor3 = Color3.fromRGB(0, 255, 150)
+DelayInput.Font = Enum.Font.SourceSansBold
+DelayInput.TextSize = 13
+DelayInput.ClearTextOnFocus = false
+DelayInput.Parent = ControlFrame
+
+-- Master Action Trigger Button
+local MasterToggle = Instance.new("TextButton")
+MasterToggle.Size = UDim2.new(0, 140, 0.7, 0)
+MasterToggle.Position = UDim2.new(1, -148, 0, 6)
+MasterToggle.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MasterToggle.BorderColor3 = Color3.fromRGB(50, 50, 50)
+MasterToggle.Text = "AUTO SHOOT: OFF"
+MasterToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+MasterToggle.Font = Enum.Font.SourceSansBold
+MasterToggle.TextSize = 12
+MasterToggle.Parent = ControlFrame
+
+local DynamicStatus = Instance.new("TextLabel")
+DynamicStatus.Size = UDim2.new(1, -14, 0, 25)
+DynamicStatus.Position = UDim2.new(0, 7, 0, 202)
+DynamicStatus.BackgroundTransparency = 1
+DynamicStatus.Text = "Select your target spells above."
+DynamicStatus.TextColor3 = Color3.fromRGB(150, 150, 150)
+DynamicStatus.Font = Enum.Font.SourceSansItalic
+DynamicStatus.TextSize = 12
+DynamicStatus.Parent = MainFrame
 
 ---------------------------------------------------------
--- 3. INTERCEPTOR PIPELINE (ERROR-SAFE)
+-- 3. INTERACTIVE SELECTION PARSING ENGINE
 ---------------------------------------------------------
-RunService.Heartbeat:Connect(function()
-    if not SystemActive then 
-        StatusLabel.Text = "Awaiting activation toggle..."
-        return 
-    end
+local SelectedSpells = {}
+local AutoShootActive = false
 
-    local character = Player.Character
-    if not character then return end
-    
-    local activeTool = character:FindFirstChildOfClass("Tool")
-    local valueLocked = false
-    
-    -- Part A: Safe Structural Configuration Lock
-    if activeTool then
-        local cd = activeTool:FindFirstChild("Cooldown", true)
-        if cd and cd:IsA("ValueBase") then
-            cd.Value = 0.01 -- Set to minimum safe interval to prevent server lag drops
-            valueLocked = true
-        end
-    end
-    
-    -- Part B: Safe Animation Track Accelerator
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if humanoid and activeTool then
-        local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
-        local tracks = animator:GetPlayingAnimationTracks()
+-- Read available game spells directly from ReplicatedStorage definition folders
+local CardsFolder = ReplicatedStorage:FindFirstChild("Cards")
+if CardsFolder then
+    local availableCards = CardsFolder:GetChildren()
+    for i = 1, #availableCards do
+        local card = availableCards[i]
         
-        local acceleratedCount = 0
-        for i = 1, #tracks do
-            local track = tracks[i]
-            
-            -- Ignore basic movement/idles, target weapon swings only
-            if track.Name ~= "Hold" and track.Name ~= "Idle" and track.Name ~= "run" and track.Name ~= "walk" then
-                track:AdjustSpeed(35) -- Accelerate swing time securely without calling missing environment values
-                acceleratedCount = acceleratedCount + 1
+        -- Generate interactive item rows inside scroll view dynamically
+        local ItemButton = Instance.new("TextButton")
+        ItemButton.Size = UDim2.new(1, -8, 0, 24)
+        ItemButton.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+        ItemButton.BorderColor3 = Color3.fromRGB(45, 45, 50)
+        ItemButton.Text = "  [ ] " .. card.Name
+        ItemButton.TextColor3 = Color3.fromRGB(210, 210, 210)
+        ItemButton.Font = Enum.Font.SourceSans
+        ItemButton.TextSize = 13
+        ItemButton.TextXAlignment = Enum.TextXAlignment.Left
+        ItemButton.Parent = ScrollList
+        
+        -- Adjust inner scroll panel size boundaries sequentially
+        ScrollList.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
+        
+        -- Multi-selection indexing toggle logic 
+        ItemButton.MouseButton1Click:Connect(function()
+            if SelectedSpells[card.Name] then
+                SelectedSpells[card.Name] = nil
+                ItemButton.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+                ItemButton.TextColor3 = Color3.fromRGB(210, 210, 210)
+                ItemButton.Text = "  [ ] " .. card.Name
+            else
+                SelectedSpells[card.Name] = true
+                ItemButton.BackgroundColor3 = Color3.fromRGB(45, 35, 55)
+                ItemButton.TextColor3 = Color3.fromRGB(200, 150, 255)
+                ItemButton.Text = "  [*] " .. card.Name
             end
-        end
-        
-        if acceleratedCount > 0 and valueLocked then
-            StatusLabel.Text = "Active: Cooldown Locked & Swings Accelerated!"
-        elseif valueLocked then
-            StatusLabel.Text = "Cooldown value forced down. Click to swing."
-        else
-            StatusLabel.Text = "Searching weapon configuration..."
-        end
-    else
-        StatusLabel.Text = "Equip a weapon instance to start tracking."
+        end)
     end
+else
+    DynamicStatus.Text = "Error: ReplicatedStorage.Cards index missing."
+end
+
+-- Master Auto-Shoot Loop Activation
+MasterToggle.MouseButton1Click:Connect(function()
+    AutoShootActive = not AutoShootActive
+    MasterToggle.Text = AutoShootActive and "AUTO SHOOT: ON" or "AUTO SHOOT: OFF"
+    MasterToggle.BackgroundColor3 = AutoShootActive and Color3.fromRGB(90, 30, 30) or Color3.fromRGB(20, 20, 20)
 end)
+
+---------------------------------------------------------
+-- 4. BACKEND SEQUENCE FIRE PIPELINE
+---------------------------------------------------------
+local UseSpellRemote = ReplicatedStorage:FindFirstChild("UseSpell")
+
+task.spawn(function()
+    while true do
+        task.wait() -- Prevent engine hangs completely
+        
+        if AutoShootActive and UseSpellRemote then
+            -- Safely pull execution intervals directly from textbox configurations 
+            local rawInterval = tonumber(DelayInput.Text)
+            local
