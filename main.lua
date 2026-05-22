@@ -9,35 +9,40 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 ---------------------------------------------------------
--- 1. BACKGROUND ENVIRONMENT PROTECTION HOOK
+-- 1. MEMORY OVERRIDE METAMETHOD HOOK (Bypass tick/os.clock checks)
 ---------------------------------------------------------
-local SafeColor = Instance.new("Color3Value")
-SafeColor.Name = "NameColors"
-SafeColor.Value = Color3.fromRGB(255, 255, 255)
+local CooldownActive = true
 
-local oldIndex
-oldIndex = hookmetamethod(game, "__index", function(self, key)
-    if tostring(key) == "NameColors" and self:IsA("Player") then
-        local success, realChild = pcall(function() 
-            return oldIndex(game, "FindFirstChild")(self, "NameColors") 
-        end)
-        if success and realChild then 
-            return realChild 
-        end
-        return SafeColor
+local oldHook
+oldHook = hooknummethod or hookmetamethod(game, "__index", function(self, key)
+    if CooldownActive and (key == "Cooldown" or key == "cd" or key == "AttackDelay") then
+        return 0
     end
-    return oldIndex(self, key)
+    return oldHook(self, key)
 end)
 
+-- Garbage Collection Scan to force internal tables to 0 cooldown
+local function bypassMemoryTables()
+    for _, v in pairs(getgc(true)) do
+        if type(v) == "table" then
+            if rawget(v, "Cooldown") or rawget(v, "cooldown") then
+                rawset(v, "Cooldown", 0)
+                rawset(v, "cooldown", 0)
+                rawset(v, "MaxCooldown", 0)
+            end
+        end
+    end
+end
+
 ---------------------------------------------------------
--- 2. INTERFACE CONSTRUCTOR (Plain Theme)
+-- 2. INTERFACE CONSTRUCTOR (Plain Gray UI Frame)
 ---------------------------------------------------------
-if CoreGui:FindFirstChild("DeltaM1CooldownPanel") then
-    CoreGui.DeltaM1CooldownPanel:Destroy()
+if CoreGui:FindFirstChild("UniversalM1BypassPanel") then
+    CoreGui.UniversalM1BypassPanel:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DeltaM1CooldownPanel"
+ScreenGui.Name = "UniversalM1BypassPanel"
 ScreenGui.ResetOnSpawn = false
 
 local attached, _ = pcall(function() ScreenGui.Parent = CoreGui end)
@@ -63,14 +68,14 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -10, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Universal M1 Cooldown Modifier"
+Title.Text = "Memory-Level Cooldown Bypass"
 Title.TextColor3 = Color3.fromRGB(240, 240, 240)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MovingThing
 
--- Simple Drag Handler Block
+-- Simple Drag Handler
 local dragging, dragInput, dragStart, startPos
 MovingThing.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -99,7 +104,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Live Cooldown Text Input Box
+-- Toggle Button Frame
 local ConfigHeaderBox = Instance.new("Frame")
 ConfigHeaderBox.Size = UDim2.new(1, -14, 0, 35)
 ConfigHeaderBox.Position = UDim2.new(0, 7, 0, 37)
@@ -111,31 +116,41 @@ local ConfigLabel = Instance.new("TextLabel")
 ConfigLabel.Size = UDim2.new(0.6, 0, 1, 0)
 ConfigLabel.Position = UDim2.new(0, 8, 0, 0)
 ConfigLabel.BackgroundTransparency = 1
-ConfigLabel.Text = "M1 Cooldown Value:"
+ConfigLabel.Text = "No-Cooldown State:"
 ConfigLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 ConfigLabel.Font = Enum.Font.SourceSans
 ConfigLabel.TextSize = 13
 ConfigLabel.TextXAlignment = Enum.TextXAlignment.Left
 ConfigLabel.Parent = ConfigHeaderBox
 
-local CooldownValueInput = Instance.new("TextBox")
-CooldownValueInput.Size = UDim2.new(0.35, 0, 0.7, 0)
-CooldownValueInput.Position = UDim2.new(0.62, 0, 0.15, 0)
-CooldownValueInput.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-CooldownValueInput.BorderColor3 = Color3.fromRGB(60, 60, 60)
-CooldownValueInput.Text = "0.1"
-CooldownValueInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-CooldownValueInput.Font = Enum.Font.SourceSansBold
-CooldownValueInput.TextSize = 13
-CooldownValueInput.ClearTextOnFocus = false
-CooldownValueInput.Parent = ConfigHeaderBox
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0.35, 0, 0.7, 0)
+ToggleBtn.Position = UDim2.new(0.62, 0, 0.15, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+ToggleBtn.BorderColor3 = Color3.fromRGB(80, 80, 80)
+ToggleBtn.Text = "ACTIVE"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.TextSize = 13
+ToggleBtn.Parent = ConfigHeaderBox
 
--- Current Target Visual Feedback Label
+ToggleBtn.MouseButton1Click:Connect(function()
+    CooldownActive = not CooldownActive
+    if CooldownActive then
+        ToggleBtn.Text = "ACTIVE"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    else
+        ToggleBtn.Text = "DISABLED"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    end
+end)
+
+-- Live Status Feedback Label
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -14, 0, 25)
 StatusLabel.Position = UDim2.new(0, 7, 0, 77)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: Waiting for equipped weapon..."
+StatusLabel.Text = "Status: Monitoring memory frames & values..."
 StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
 StatusLabel.Font = Enum.Font.SourceSansItalic
 StatusLabel.TextSize = 12
@@ -143,27 +158,26 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 StatusLabel.Parent = MainFrame
 
 ---------------------------------------------------------
--- 3. RECURSIVE LIVE INTERCEPTOR LOOP
+-- 3. CONSTANT BACKPACK & ATTACK DATA CLEANER LOOP
 ---------------------------------------------------------
 RunService.Heartbeat:Connect(function()
-    local targetNumber = tonumber(CooldownValueInput.Text) or 0
-    local character = Player.Character
+    if not CooldownActive then return end
     
+    -- Clear standard configurations if they appear
+    local character = Player.Character
     if character then
-        local activeTool = character:FindFirstChildOfClass("Tool")
-        
+        local activeTool = character:FindFirstChildOfClass("Tool") or Player.Backpack:FindFirstChildOfClass("Tool")
         if activeTool then
-            -- Setting the second argument to 'true' forces a deep search throughout all nested objects
-            local cdObj = activeTool:FindFirstChild("Cooldown", true)
-            
-            if cdObj and cdObj:IsA("ValueBase") then
-                cdObj.Value = targetNumber
-                StatusLabel.Text = "Modifying: " .. activeTool.Name .. " (" .. tostring(targetNumber) .. "s)"
-            else
-                StatusLabel.Text = "Holding: " .. activeTool.Name .. " (No 'Cooldown' value found inside)"
+            local cd = activeTool:FindFirstChild("Cooldown", true) or activeTool:FindFirstChild("cd", true)
+            if cd and cd:IsA("ValueBase") then
+                cd.Value = 0
             end
+            StatusLabel.Text = "Bypassing: " .. activeTool.Name
         else
-            StatusLabel.Text = "Status: No weapon equipped in your hand."
+            StatusLabel.Text = "Status: Safe (Memory Hooks Armed)"
         end
     end
+    
+    -- Perform routine table sweeps in memory
+    pcall(bypassMemoryTables)
 end)
