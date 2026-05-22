@@ -9,10 +9,10 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 -- Build Tracking Manifest
-local SCRIPT_VERSION = "1.0.7-Overdrive"
+local SCRIPT_VERSION = "1.0.8-Universal"
 
 ---------------------------------------------------------
--- 1. SYSTEM UNLINKING PURGE (Wipes all old configurations)
+-- 1. CLEAN RESET OF ALL PREVIOUS INSTANCES
 ---------------------------------------------------------
 local oldPanels = {
     "DeltaGlobalM1Panel",
@@ -23,22 +23,22 @@ local oldPanels = {
     "DeltaWeaponFirePanel",
     "DeltaInterceptorPanel",
     "DeltaCancelPanel",
-    "DeltaFixedCancelPanel"
+    "DeltaFixedCancelPanel",
+    "DeltaHyperV6Panel"
 }
 
 for _, panelName in ipairs(oldPanels) do
     pcall(function()
         if CoreGui:FindFirstChild(panelName) then CoreGui[panelName]:Destroy() end
         if Player.PlayerGui:FindFirstChild(panelName) then Player.PlayerGui[panelName]:Destroy() end
-     pcall(function()
-end)
+    end)
+end
 
 ---------------------------------------------------------
--- 2. COMPLETELY UNIQUE INTERFACE CONSTRUCTOR
+-- 2. UNIVERSAL COMPATIBILITY INTERFACE
 ---------------------------------------------------------
--- Using a completely untracked name to force Luau to draw a fresh UI window
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DeltaHyperV6Panel"
+ScreenGui.Name = "DeltaUniversalV8Panel"
 ScreenGui.ResetOnSpawn = false
 
 local attached, _ = pcall(function() ScreenGui.Parent = CoreGui end)
@@ -47,25 +47,25 @@ if not attached then ScreenGui.Parent = Player:WaitForChild("PlayerGui") end
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 280, 0, 130)
 MainFrame.Position = UDim2.new(0.2, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 1
-MainFrame.BorderColor3 = Color3.fromRGB(65, 65, 65)
+MainFrame.BorderColor3 = Color3.fromRGB(55, 55, 55)
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
 
 local MovingThing = Instance.new("Frame")
 MovingThing.Size = UDim2.new(1, 0, 0, 30)
-MovingThing.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MovingThing.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 MovingThing.BorderSizePixel = 1
-MovingThing.BorderColor3 = Color3.fromRGB(65, 65, 65)
+MovingThing.BorderColor3 = Color3.fromRGB(55, 55, 55)
 MovingThing.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -60, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Zero-Interval Attack Engine"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Text = "Universal Weapon System"
+Title.TextColor3 = Color3.fromRGB(240, 240, 240)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -76,13 +76,13 @@ VerLabel.Size = UDim2.new(0, 80, 1, 0)
 VerLabel.Position = UDim2.new(1, -85, 0, 0)
 VerLabel.BackgroundTransparency = 1
 VerLabel.Text = "v" .. SCRIPT_VERSION
-VerLabel.TextColor3 = Color3.fromRGB(255, 0, 100) -- Vibrant neon magenta line indicator
+VerLabel.TextColor3 = Color3.fromRGB(0, 220, 255) -- Cyan indicator for pure compatibility
 VerLabel.Font = Enum.Font.SourceSansBold
 VerLabel.TextSize = 11
 VerLabel.TextXAlignment = Enum.TextXAlignment.Right
 VerLabel.Parent = MovingThing
 
--- Frame Drag Elements
+-- Simple Drag Handler
 local dragging, dragInput, dragStart, startPos
 MovingThing.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -108,20 +108,20 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Activation Toggle Layout Frame
+-- Toggle Options
 local ModeFrame = Instance.new("Frame")
 ModeFrame.Size = UDim2.new(1, -14, 0, 35)
 ModeFrame.Position = UDim2.new(0, 7, 0, 42)
-ModeFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-ModeFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
+ModeFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ModeFrame.BorderColor3 = Color3.fromRGB(45, 45, 45)
 ModeFrame.Parent = MainFrame
 
 local ModeLabel = Instance.new("TextLabel")
 ModeLabel.Size = UDim2.new(0, 160, 1, 0)
 ModeLabel.Position = UDim2.new(0, 8, 0, 0)
 ModeLabel.BackgroundTransparency = 1
-ModeLabel.Text = "Engage Hyper-Speed Mode:"
-ModeLabel.TextColor3 = Color3.fromRGB(230, 230, 230)
+ModeLabel.Text = "Zero-Interval Fire Mode:"
+ModeLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 ModeLabel.Font = Enum.Font.SourceSans
 ModeLabel.TextSize = 13
 ModeLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -130,38 +130,38 @@ ModeLabel.Parent = ModeFrame
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Size = UDim2.new(0, 80, 0.7, 0)
 ToggleBtn.Position = UDim2.new(1, -88, 0, 5)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-ToggleBtn.BorderColor3 = Color3.fromRGB(55, 55, 55)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleBtn.BorderColor3 = Color3.fromRGB(50, 50, 50)
 ToggleBtn.Text = "OFF"
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleBtn.Font = Enum.Font.SourceSansBold
 ToggleBtn.TextSize = 13
 ToggleBtn.Parent = ModeFrame
 
-local EngineActive = false
+local SystemActive = false
 ToggleBtn.MouseButton1Click:Connect(function()
-    EngineActive = not EngineActive
-    ToggleBtn.Text = EngineActive and "ON" or "OFF"
-    ToggleBtn.BackgroundColor3 = EngineActive and Color3.fromRGB(80, 20, 40) or Color3.fromRGB(15, 15, 15)
+    SystemActive = not SystemActive
+    ToggleBtn.Text = SystemActive and "ON" or "OFF"
+    ToggleBtn.BackgroundColor3 = SystemActive and Color3.fromRGB(40, 60, 80) or Color3.fromRGB(20, 20, 20)
 end)
 
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -14, 0, 25)
 StatusLabel.Position = UDim2.new(0, 7, 0, 90)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Session initialized. Cache bypassed."
-StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+StatusLabel.Text = "Universal build loaded without experimental hooks."
+StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 StatusLabel.Font = Enum.Font.SourceSansItalic
 StatusLabel.TextSize = 12
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 StatusLabel.Parent = MainFrame
 
 ---------------------------------------------------------
--- 3. UNRESTRICTED DUAL PIPELINE ENVIRONMENT LOOP
+-- 3. INTERCEPTOR PIPELINE (ERROR-SAFE)
 ---------------------------------------------------------
 RunService.Heartbeat:Connect(function()
-    if not EngineActive then 
-        StatusLabel.Text = "Awaiting activation..."
+    if not SystemActive then 
+        StatusLabel.Text = "Awaiting activation toggle..."
         return 
     end
 
@@ -169,43 +169,42 @@ RunService.Heartbeat:Connect(function()
     if not character then return end
     
     local activeTool = character:FindFirstChildOfClass("Tool")
-    local valueOverrode = false
+    local valueLocked = false
     
-    -- Operational Step 1: Lock the runtime value tree properties down
+    -- Part A: Safe Structural Configuration Lock
     if activeTool then
         local cd = activeTool:FindFirstChild("Cooldown", true)
         if cd and cd:IsA("ValueBase") then
-            cd.Value = 0.001 -- Lock numerical constraint property tree
-            valueOverrode = true
+            cd.Value = 0.01 -- Set to minimum safe interval to prevent server lag drops
+            valueLocked = true
         end
     end
     
-    -- Operational Step 2: Push track rendering engine speed modifiers
+    -- Part B: Safe Animation Track Accelerator
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if humanoid and activeTool then
         local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
         local tracks = animator:GetPlayingAnimationTracks()
         
-        local modifiedCount = 0
+        local acceleratedCount = 0
         for i = 1, #tracks do
             local track = tracks[i]
             
-            -- Keep standard server states clean, throttle action loops 50x faster
+            -- Ignore basic movement/idles, target weapon swings only
             if track.Name ~= "Hold" and track.Name ~= "Idle" and track.Name ~= "run" and track.Name ~= "walk" then
-                track:AdjustSpeed(50) 
-                modifiedCount = modifiedCount + 1
+                track:AdjustSpeed(35) -- Accelerate swing time securely without calling missing environment values
+                acceleratedCount = acceleratedCount + 1
             end
         end
         
-        -- Screen Feedback Display Execution Status
-        if modifiedCount > 0 and valueOverrode then
-            StatusLabel.Text = "Overdrive Engaged: 50x Swing + 0.001 CD Locked!"
-        elseif valueOverrode then
-            StatusLabel.Text = "Targeting system properties... Swing weapon."
+        if acceleratedCount > 0 and valueLocked then
+            StatusLabel.Text = "Active: Cooldown Locked & Swings Accelerated!"
+        elseif valueLocked then
+            StatusLabel.Text = "Cooldown value forced down. Click to swing."
         else
-            StatusLabel.Text = "Interrogating held item configurations..."
+            StatusLabel.Text = "Searching weapon configuration..."
         end
     else
-        StatusLabel.Text = "Equip a weapon to inject engine parameters."
+        StatusLabel.Text = "Equip a weapon instance to start tracking."
     end
 end)
