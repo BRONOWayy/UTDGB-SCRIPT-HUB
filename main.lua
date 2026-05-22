@@ -9,17 +9,17 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 -- Build Tracking Manifest
-local SCRIPT_VERSION = "1.0.3"
+local SCRIPT_VERSION = "1.0.4"
 
 ---------------------------------------------------------
 -- 1. CLEAN INTERFACE CONSTRUCTOR
 ---------------------------------------------------------
-if CoreGui:FindFirstChild("DeltaInterceptorPanel") then
-    CoreGui.DeltaInterceptorPanel:Destroy()
+if CoreGui:FindFirstChild("DeltaCancelPanel") then
+    CoreGui.DeltaCancelPanel:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DeltaInterceptorPanel"
+ScreenGui.Name = "DeltaCancelPanel"
 ScreenGui.ResetOnSpawn = false
 
 local attached, _ = pcall(function() ScreenGui.Parent = CoreGui end)
@@ -45,7 +45,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -60, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Pipeline Cooldown Lock"
+Title.Text = "Animation & Cooldown Nullifier"
 Title.TextColor3 = Color3.fromRGB(240, 240, 240)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
@@ -89,7 +89,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle Frame
+-- Toggle Button
 local ModeFrame = Instance.new("Frame")
 ModeFrame.Size = UDim2.new(1, -14, 0, 35)
 ModeFrame.Position = UDim2.new(0, 7, 0, 42)
@@ -101,7 +101,7 @@ local ModeLabel = Instance.new("TextLabel")
 ModeLabel.Size = UDim2.new(0.6, 0, 1, 0)
 ModeLabel.Position = UDim2.new(0, 8, 0, 0)
 ModeLabel.BackgroundTransparency = 1
-ModeLabel.Text = "Force Absolute Cooldown (0.01):"
+ModeLabel.Text = "Cancel Animation Delays:"
 ModeLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 ModeLabel.Font = Enum.Font.SourceSans
 ModeLabel.TextSize = 13
@@ -119,55 +119,69 @@ ToggleBtn.Font = Enum.Font.SourceSansBold
 ToggleBtn.TextSize = 13
 ToggleBtn.Parent = ModeFrame
 
-local LockActive = false
+local BypassActive = false
 ToggleBtn.MouseButton1Click:Connect(function()
-    LockActive = not LockActive
-    ToggleBtn.Text = LockActive and "ON" or "OFF"
-    ToggleBtn.BackgroundColor3 = LockActive and Color3.fromRGB(55, 55, 55) or Color3.fromRGB(25, 25, 25)
+    BypassActive = not BypassActive
+    ToggleBtn.Text = BypassActive and "ON" or "OFF"
+    ToggleBtn.BackgroundColor3 = BypassActive and Color3.fromRGB(55, 55, 55) or Color3.fromRGB(25, 25, 25)
 end)
 
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -14, 0, 25)
 StatusLabel.Position = UDim2.new(0, 7, 0, 90)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: Operational"
+StatusLabel.Text = "Status: Monitoring local tool instance structures..."
 StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 StatusLabel.Font = Enum.Font.SourceSansItalic
 StatusLabel.TextSize = 12
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
-MainFrame.Parent = ScreenGui
 StatusLabel.Parent = MainFrame
 
 ---------------------------------------------------------
--- 2. DIRECT DATA OVERRIDE ENGINE
+-- 2. ANIMATION CANCELLER & VALUE RESET pipeline
 ---------------------------------------------------------
 RunService.Heartbeat:Connect(function()
-    if not LockActive then return end
+    local character = Player.Character
+    if not character then return end
     
-    local updatedCount = 0
+    local activeTool = character:FindFirstChildOfClass("Tool")
     
-    -- Target the inventory storage locations verified via your workspace layout
-    local paths = { Player:FindFirstChild("Backpack"), Player.Character }
-    
-    for p = 1, #paths do
-        local container = paths[p]
-        if container then
-            -- Locate tools inside your storage tree directly
-            local items = container:GetDescendants()
-            for i = 1, #items do
-                local obj = items[i]
-                -- Match specific NumberValue configurations
-                if obj:IsA("NumberValue") and string.lower(obj.Name) == "cooldown" then
-                    obj.Value = 0.01
-                    updatedCount = updatedCount + 1
-                end
-            end
+    -- Part A: Always force the data value to 0.01 regardless of state
+    if activeTool then
+        local cd = activeTool:FindFirstChild("Cooldown", true)
+        if cd and cd:IsA("ValueBase") then
+            cd.Value = 0.01
         end
     end
     
-    if updatedCount > 0 then
-        StatusLabel.Text = "Altered " .. tostring(updatedCount) .. " runtime value structures to 0.01"
+    if not BypassActive then 
+        StatusLabel.Text = "Monitoring weapon configuration..."
+        return 
+    end
+    
+    -- Part B: Intercept and forcefully terminate attack animations
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid and activeTool then
+        local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
+        local tracks = animator:GetPlayingAnimationTracks()
+        
+        local killedTracks = 0
+        for i = 1, #tracks do
+            local track = tracks[i]
+            
+            -- Keep the running idles/holds, drop everything else instantly
+            if track.Name ~= "Hold" and track.Name ~= "Idle" and track.Name ~= "run" and track.Name ~= "walk" then
+                track:Stop() -- Wipe out the track timing layout completely
+                killedTracks = killedTracks + 1
+            end
+        end
+        
+        if killedTracks > 0 then
+            StatusLabel.Text = "Interception Active: Dropped " .. tostring(killedTracks) .. " animation locks"
+        else
+            StatusLabel.Text = "Awaiting swing animation trigger..."
+        end
     else
-        StatusLabel.Text = "Searching for active weapon configurations..."
+        StatusLabel.Text = "Hold a weapon to begin interception."
     end
 end)
