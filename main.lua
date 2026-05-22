@@ -9,40 +9,56 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 ---------------------------------------------------------
--- 1. MEMORY OVERRIDE METAMETHOD HOOK (Bypass tick/os.clock checks)
+-- 1. BACKGROUND ENVIRONMENT PROTECTION HOOK
 ---------------------------------------------------------
-local CooldownActive = true
+local SafeColor = Instance.new("Color3Value")
+SafeColor.Name = "NameColors"
+SafeColor.Value = Color3.fromRGB(255, 255, 255)
 
-local oldHook
-oldHook = hooknummethod or hookmetamethod(game, "__index", function(self, key)
-    if CooldownActive and (key == "Cooldown" or key == "cd" or key == "AttackDelay") then
-        return 0
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", function(self, key)
+    if tostring(key) == "NameColors" and self:IsA("Player") then
+        local success, realChild = pcall(function() 
+            return oldIndex(game, "FindFirstChild")(self, "NameColors") 
+        end)
+        if success and realChild then 
+            return realChild 
+        end
+        return SafeColor
     end
-    return oldHook(self, key)
+    return oldIndex(self, key)
 end)
 
--- Garbage Collection Scan to force internal tables to 0 cooldown
-local function bypassMemoryTables()
-    for _, v in pairs(getgc(true)) do
-        if type(v) == "table" then
-            if rawget(v, "Cooldown") or rawget(v, "cooldown") then
-                rawset(v, "Cooldown", 0)
-                rawset(v, "cooldown", 0)
-                rawset(v, "MaxCooldown", 0)
-            end
+---------------------------------------------------------
+-- 2. ENHANCED MULTI-TARGET SEARCH LOCATOR
+---------------------------------------------------------
+local LocatedFolders = {}
+
+local function scanForWeaponsContainers()
+    table.clear(LocatedFolders)
+    
+    -- Sweep the entire runtime hierarchy for any container named "Weapons"
+    local allObjects = game:GetDescendants()
+    for i = 1, #allObjects do
+        local obj = allObjects[i]
+        if obj.Name == "Weapons" then
+            table.insert(LocatedFolders, obj)
         end
     end
 end
 
+-- Run initial search scan
+scanForWeaponsContainers()
+
 ---------------------------------------------------------
--- 2. INTERFACE CONSTRUCTOR (Plain Gray UI Frame)
+-- 3. INTERFACE CONSTRUCTOR (Plain Theme)
 ---------------------------------------------------------
-if CoreGui:FindFirstChild("UniversalM1BypassPanel") then
-    CoreGui.UniversalM1BypassPanel:Destroy()
+if CoreGui:FindFirstChild("DeltaGlobalM1Panel") then
+    CoreGui.DeltaGlobalM1Panel:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "UniversalM1BypassPanel"
+ScreenGui.Name = "DeltaGlobalM1Panel"
 ScreenGui.ResetOnSpawn = false
 
 local attached, _ = pcall(function() ScreenGui.Parent = CoreGui end)
@@ -68,14 +84,14 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -10, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Memory-Level Cooldown Bypass"
+Title.Text = "Global Weapons Folder Modifier"
 Title.TextColor3 = Color3.fromRGB(240, 240, 240)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MovingThing
 
--- Simple Drag Handler
+-- Simple Drag Handler Block
 local dragging, dragInput, dragStart, startPos
 MovingThing.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -104,7 +120,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle Button Frame
+-- Live Cooldown Text Input Box
 local ConfigHeaderBox = Instance.new("Frame")
 ConfigHeaderBox.Size = UDim2.new(1, -14, 0, 35)
 ConfigHeaderBox.Position = UDim2.new(0, 7, 0, 37)
@@ -116,41 +132,31 @@ local ConfigLabel = Instance.new("TextLabel")
 ConfigLabel.Size = UDim2.new(0.6, 0, 1, 0)
 ConfigLabel.Position = UDim2.new(0, 8, 0, 0)
 ConfigLabel.BackgroundTransparency = 1
-ConfigLabel.Text = "No-Cooldown State:"
+ConfigLabel.Text = "Global Cooldown Value:"
 ConfigLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 ConfigLabel.Font = Enum.Font.SourceSans
 ConfigLabel.TextSize = 13
 ConfigLabel.TextXAlignment = Enum.TextXAlignment.Left
 ConfigLabel.Parent = ConfigHeaderBox
 
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0.35, 0, 0.7, 0)
-ToggleBtn.Position = UDim2.new(0.62, 0, 0.15, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-ToggleBtn.BorderColor3 = Color3.fromRGB(80, 80, 80)
-ToggleBtn.Text = "ACTIVE"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.TextSize = 13
-ToggleBtn.Parent = ConfigHeaderBox
+local CooldownValueInput = Instance.new("TextBox")
+CooldownValueInput.Size = UDim2.new(0.35, 0, 0.7, 0)
+CooldownValueInput.Position = UDim2.new(0.62, 0, 0.15, 0)
+CooldownValueInput.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+CooldownValueInput.BorderColor3 = Color3.fromRGB(60, 60, 60)
+CooldownValueInput.Text = "0.01"
+CooldownValueInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+CooldownValueInput.Font = Enum.Font.SourceSansBold
+CooldownValueInput.TextSize = 13
+CooldownValueInput.ClearTextOnFocus = false
+CooldownValueInput.Parent = ConfigHeaderBox
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    CooldownActive = not CooldownActive
-    if CooldownActive then
-        ToggleBtn.Text = "ACTIVE"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    else
-        ToggleBtn.Text = "DISABLED"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    end
-end)
-
--- Live Status Feedback Label
+-- Current Status Feedback Label
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -14, 0, 25)
 StatusLabel.Position = UDim2.new(0, 7, 0, 77)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: Monitoring memory frames & values..."
+StatusLabel.Text = "Initializing global sweep framework..."
 StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
 StatusLabel.Font = Enum.Font.SourceSansItalic
 StatusLabel.TextSize = 12
@@ -158,26 +164,44 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 StatusLabel.Parent = MainFrame
 
 ---------------------------------------------------------
--- 3. CONSTANT BACKPACK & ATTACK DATA CLEANER LOOP
+-- 4. RECURSIVE LIVE VALUE OVERWRITE LOOP
 ---------------------------------------------------------
+local loopCounter = 0
+
 RunService.Heartbeat:Connect(function()
-    if not CooldownActive then return end
+    loopCounter = loopCounter + 1
+    local targetNumber = tonumber(CooldownValueInput.Text) or 0.01
     
-    -- Clear standard configurations if they appear
-    local character = Player.Character
-    if character then
-        local activeTool = character:FindFirstChildOfClass("Tool") or Player.Backpack:FindFirstChildOfClass("Tool")
-        if activeTool then
-            local cd = activeTool:FindFirstChild("Cooldown", true) or activeTool:FindFirstChild("cd", true)
-            if cd and cd:IsA("ValueBase") then
-                cd.Value = 0
+    -- Periodically re-scan the tree to discover new or streamed-in items
+    if loopCounter % 120 == 0 then
+        scanForWeaponsContainers()
+    end
+
+    if #LocatedFolders == 0 then
+        StatusLabel.Text = "Scanning hierarchy for any 'Weapons' directories..."
+        return
+    end
+
+    local alteredCount = 0
+    
+    -- Drill down through all matched folders across the entire game tree
+    for f = 1, #LocatedFolders do
+        local folder = LocatedFolders[f]
+        if folder and folder.Parent then
+            local descendants = folder:GetDescendants()
+            for d = 1, #descendants do
+                local obj = descendants[d]
+                if obj.Name == "Cooldown" and obj:IsA("ValueBase") then
+                    obj.Value = targetNumber
+                    alteredCount = alteredCount + 1
+                end
             end
-            StatusLabel.Text = "Bypassing: " .. activeTool.Name
-        else
-            StatusLabel.Text = "Status: Safe (Memory Hooks Armed)"
         end
     end
     
-    -- Perform routine table sweeps in memory
-    pcall(bypassMemoryTables)
+    if alteredCount > 0 then
+        StatusLabel.Text = "Forcing " .. tostring(alteredCount) .. " weapon CDs to " .. tostring(targetNumber) .. "s"
+    else
+        StatusLabel.Text = "Found paths, but no 'Cooldown' values inside."
+    end
 end)
