@@ -63,7 +63,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -10, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Equipped M1 Cooldown Modifier"
+Title.Text = "Universal M1 Cooldown Modifier"
 Title.TextColor3 = Color3.fromRGB(240, 240, 240)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
@@ -123,7 +123,7 @@ CooldownValueInput.Size = UDim2.new(0.35, 0, 0.7, 0)
 CooldownValueInput.Position = UDim2.new(0.62, 0, 0.15, 0)
 CooldownValueInput.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 CooldownValueInput.BorderColor3 = Color3.fromRGB(60, 60, 60)
-CooldownValueInput.Text = "0"
+CooldownValueInput.Text = "0.1"
 CooldownValueInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 CooldownValueInput.Font = Enum.Font.SourceSansBold
 CooldownValueInput.TextSize = 13
@@ -143,7 +143,7 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 StatusLabel.Parent = MainFrame
 
 ---------------------------------------------------------
--- 3. LIVE CHARACTER BACKPACK & WEAPON INTERCEPTOR LOOP
+-- 3. RECURSIVE LIVE INTERCEPTOR LOOP
 ---------------------------------------------------------
 RunService.Heartbeat:Connect(function()
     local targetNumber = tonumber(CooldownValueInput.Text) or 0
@@ -153,17 +153,14 @@ RunService.Heartbeat:Connect(function()
         local activeTool = character:FindFirstChildOfClass("Tool")
         
         if activeTool then
-            local toolConfig = activeTool:FindFirstChild("Tool")
-            if toolConfig then
-                local cdObj = toolConfig:FindFirstChild("Cooldown")
-                if cdObj and cdObj:IsA("ValueBase") then
-                    cdObj.Value = targetNumber
-                    StatusLabel.Text = "Modifying: " .. activeTool.Name .. " (" .. tostring(targetNumber) .. "s)"
-                else
-                    StatusLabel.Text = "Found " .. activeTool.Name .. " but 'Cooldown' object is missing"
-                end
+            -- Setting the second argument to 'true' forces a deep search throughout all nested objects
+            local cdObj = activeTool:FindFirstChild("Cooldown", true)
+            
+            if cdObj and cdObj:IsA("ValueBase") then
+                cdObj.Value = targetNumber
+                StatusLabel.Text = "Modifying: " .. activeTool.Name .. " (" .. tostring(targetNumber) .. "s)"
             else
-                StatusLabel.Text = "Holding: " .. activeTool.Name .. " (Missing inner 'Tool' folder)"
+                StatusLabel.Text = "Holding: " .. activeTool.Name .. " (No 'Cooldown' value found inside)"
             end
         else
             StatusLabel.Text = "Status: No weapon equipped in your hand."
