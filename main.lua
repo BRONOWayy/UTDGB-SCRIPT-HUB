@@ -30,35 +30,14 @@ oldIndex = hookmetamethod(game, "__index", function(self, key)
 end)
 
 ---------------------------------------------------------
--- 2. ENHANCED MULTI-TARGET SEARCH LOCATOR
+-- 2. INTERFACE CONSTRUCTOR (Plain Theme)
 ---------------------------------------------------------
-local LocatedFolders = {}
-
-local function scanForWeaponsContainers()
-    table.clear(LocatedFolders)
-    
-    -- Sweep the entire runtime hierarchy for any container named "Weapons"
-    local allObjects = game:GetDescendants()
-    for i = 1, #allObjects do
-        local obj = allObjects[i]
-        if obj.Name == "Weapons" then
-            table.insert(LocatedFolders, obj)
-        end
-    end
-end
-
--- Run initial search scan
-scanForWeaponsContainers()
-
----------------------------------------------------------
--- 3. INTERFACE CONSTRUCTOR (Plain Theme)
----------------------------------------------------------
-if CoreGui:FindFirstChild("DeltaGlobalM1Panel") then
-    CoreGui.DeltaGlobalM1Panel:Destroy()
+if CoreGui:FindFirstChild("DeltaNumberValuePanel") then
+    CoreGui.DeltaNumberValuePanel:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DeltaGlobalM1Panel"
+ScreenGui.Name = "DeltaNumberValuePanel"
 ScreenGui.ResetOnSpawn = false
 
 local attached, _ = pcall(function() ScreenGui.Parent = CoreGui end)
@@ -84,7 +63,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -10, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Global Weapons Folder Modifier"
+Title.Text = "Universal NumberValue Overrider"
 Title.TextColor3 = Color3.fromRGB(240, 240, 240)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
@@ -132,7 +111,7 @@ local ConfigLabel = Instance.new("TextLabel")
 ConfigLabel.Size = UDim2.new(0.6, 0, 1, 0)
 ConfigLabel.Position = UDim2.new(0, 8, 0, 0)
 ConfigLabel.BackgroundTransparency = 1
-ConfigLabel.Text = "Global Cooldown Value:"
+ConfigLabel.Text = "Lock Cooldown Value:"
 ConfigLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 ConfigLabel.Font = Enum.Font.SourceSans
 ConfigLabel.TextSize = 13
@@ -156,7 +135,7 @@ local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -14, 0, 25)
 StatusLabel.Position = UDim2.new(0, 7, 0, 77)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Initializing global sweep framework..."
+StatusLabel.Text = "Scanning active instances..."
 StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
 StatusLabel.Font = Enum.Font.SourceSansItalic
 StatusLabel.TextSize = 12
@@ -164,44 +143,31 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 StatusLabel.Parent = MainFrame
 
 ---------------------------------------------------------
--- 4. RECURSIVE LIVE VALUE OVERWRITE LOOP
+-- 3. GLOBAL OBJECT TREE LOOKUP LOOP
 ---------------------------------------------------------
-local loopCounter = 0
-
 RunService.Heartbeat:Connect(function()
-    loopCounter = loopCounter + 1
-    local targetNumber = tonumber(CooldownValueInput.Text) or 0.01
+    local targetValue = tonumber(CooldownValueInput.Text) or 0.01
+    local adjustedCount = 0
     
-    -- Periodically re-scan the tree to discover new or streamed-in items
-    if loopCounter % 120 == 0 then
-        scanForWeaponsContainers()
-    end
-
-    if #LocatedFolders == 0 then
-        StatusLabel.Text = "Scanning hierarchy for any 'Weapons' directories..."
-        return
-    end
-
-    local alteredCount = 0
+    -- Fetch all runtime objects across the complete workspace and storage contexts
+    local objects = game:GetDescendants()
     
-    -- Drill down through all matched folders across the entire game tree
-    for f = 1, #LocatedFolders do
-        local folder = LocatedFolders[f]
-        if folder and folder.Parent then
-            local descendants = folder:GetDescendants()
-            for d = 1, #descendants do
-                local obj = descendants[d]
-                if obj.Name == "Cooldown" and obj:IsA("ValueBase") then
-                    obj.Value = targetNumber
-                    alteredCount = alteredCount + 1
-                end
+    for i = 1, #objects do
+        local obj = objects[i]
+        
+        -- Explicitly evaluate name and class definitions to find core variables
+        if obj:IsA("NumberValue") or obj:IsA("DoubleConstrainedValue") then
+            local stringName = string.lower(obj.Name)
+            if stringName == "cooldown" or stringName == "cd" then
+                obj.Value = targetValue
+                adjustedCount = adjustedCount + 1
             end
         end
     end
     
-    if alteredCount > 0 then
-        StatusLabel.Text = "Forcing " .. tostring(alteredCount) .. " weapon CDs to " .. tostring(targetNumber) .. "s"
+    if adjustedCount > 0 then
+        StatusLabel.Text = "Locked " .. tostring(adjustedCount) .. " 'Cooldown' NumberValues to " .. tostring(targetValue)
     else
-        StatusLabel.Text = "Found paths, but no 'Cooldown' values inside."
+        StatusLabel.Text = "Searching for active Cooldown NumberValues..."
     end
 end)
