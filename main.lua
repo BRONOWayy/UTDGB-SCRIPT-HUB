@@ -8,12 +8,16 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Player = Players.LocalPlayer
 
-local SCRIPT_VERSION = "1.1.2-SpellMatrix"
+local SCRIPT_VERSION = "1.1.3-PureMatrix"
 
 ---------------------------------------------------------
--- 1. STUBBORN WINDOW CLEANER
+-- 1. TOTAL INTERFACE PURGE WIPE
 ---------------------------------------------------------
-local oldPanels = {"DeltaUniversalV8Panel", "DeltaSignalV9Panel", "DeltaCancelPanel", "DeltaHyperV6Panel", "DeltaRemoteV10Panel", "DeltaMultiCastPanel"}
+local oldPanels = {
+    "DeltaUniversalV8Panel", "DeltaSignalV9Panel", "DeltaCancelPanel", 
+    "DeltaHyperV6Panel", "DeltaRemoteV10Panel", "DeltaMultiCastPanel",
+    "DeltaSpellMatrixPanel"
+}
 for _, panelName in ipairs(oldPanels) do
     pcall(function()
         if CoreGui:FindFirstChild(panelName) then CoreGui[panelName]:Destroy() end
@@ -22,10 +26,10 @@ for _, panelName in ipairs(oldPanels) do
 end
 
 ---------------------------------------------------------
--- 2. PANEL INTERFACE BUILDER
+-- 2. STABLE INTERFACE CONSTRUCTOR
 ---------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DeltaSpellMatrixPanel"
+ScreenGui.Name = "DeltaPureMatrixPanel"
 ScreenGui.ResetOnSpawn = false
 
 local attached, _ = pcall(function() ScreenGui.Parent = CoreGui end)
@@ -34,25 +38,25 @@ if not attached then ScreenGui.Parent = Player:WaitForChild("PlayerGui") end
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 310, 0, 250)
 MainFrame.Position = UDim2.new(0.25, 0, 0.25, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
+MainFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 26)
 MainFrame.BorderSizePixel = 1
-MainFrame.BorderColor3 = Color3.fromRGB(60, 55, 70)
+MainFrame.BorderColor3 = Color3.fromRGB(50, 50, 55)
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
 
 local DragBar = Instance.new("Frame")
 DragBar.Size = UDim2.new(1, 0, 0, 32)
-DragBar.BackgroundColor3 = Color3.fromRGB(30, 28, 35)
+DragBar.BackgroundColor3 = Color3.fromRGB(32, 32, 35)
 DragBar.BorderSizePixel = 1
-DragBar.BorderColor3 = Color3.fromRGB(60, 55, 70)
+DragBar.BorderColor3 = Color3.fromRGB(50, 50, 55)
 DragBar.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -70, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Automated Spell Matrix"
-Title.TextColor3 = Color3.fromRGB(245, 245, 250)
+Title.Text = "Pure Auto-Spell Matrix"
+Title.TextColor3 = Color3.fromRGB(240, 240, 245)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -63,13 +67,13 @@ VerLabel.Size = UDim2.new(0, 60, 1, 0)
 VerLabel.Position = UDim2.new(1, -65, 0, 0)
 VerLabel.BackgroundTransparency = 1
 VerLabel.Text = "v" .. SCRIPT_VERSION
-VerLabel.TextColor3 = Color3.fromRGB(160, 110, 255)
+VerLabel.TextColor3 = Color3.fromRGB(0, 255, 150) -- Green indicator for safe universal execution
 VerLabel.Font = Enum.Font.SourceSansBold
 VerLabel.TextSize = 10
 VerLabel.TextXAlignment = Enum.TextXAlignment.Right
 VerLabel.Parent = DragBar
 
--- Simple UI Dragging Engine
+-- Safe Dragging System
 local dragging, dragInput, dragStart, startPos
 DragBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -91,12 +95,12 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Scroll view containing only Spells/Cards
+-- Spell Selection List Container
 local ScrollList = Instance.new("ScrollingFrame")
 ScrollList.Size = UDim2.new(1, -14, 0, 115)
 ScrollList.Position = UDim2.new(0, 7, 0, 40)
-ScrollList.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
-ScrollList.BorderColor3 = Color3.fromRGB(45, 42, 50)
+ScrollList.BackgroundColor3 = Color3.fromRGB(18, 18, 20)
+ScrollList.BorderColor3 = Color3.fromRGB(40, 40, 45)
 ScrollList.CanvasSize = UDim2.new(0, 0, 0, 0)
 ScrollList.ScrollBarThickness = 6
 ScrollList.Parent = MainFrame
@@ -106,12 +110,12 @@ UIListLayout.Padding = UDim.new(0, 2)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Parent = ScrollList
 
--- Speed and Activation Layout Panel
+-- Control Configurations Panel Frame
 local ControlPanel = Instance.new("Frame")
 ControlPanel.Size = UDim2.new(1, -14, 0, 42)
 ControlPanel.Position = UDim2.new(0, 7, 0, 162)
-ControlPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-ControlPanel.BorderColor3 = Color3.fromRGB(45, 42, 50)
+ControlPanel.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
+ControlPanel.BorderColor3 = Color3.fromRGB(40, 40, 45)
 ControlPanel.Parent = MainFrame
 
 local SpeedLabel = Instance.new("TextLabel")
@@ -119,7 +123,7 @@ SpeedLabel.Size = UDim2.new(0, 70, 1, 0)
 SpeedLabel.Position = UDim2.new(0, 5, 0, 0)
 SpeedLabel.BackgroundTransparency = 1
 SpeedLabel.Text = "Delay (sec):"
-SpeedLabel.TextColor3 = Color3.fromRGB(210, 210, 215)
+SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 205)
 SpeedLabel.Font = Enum.Font.SourceSans
 SpeedLabel.TextSize = 13
 SpeedLabel.Parent = ControlPanel
@@ -127,10 +131,10 @@ SpeedLabel.Parent = ControlPanel
 local DelayInput = Instance.new("TextBox")
 DelayInput.Size = UDim2.new(0, 55, 0.6, 0)
 DelayInput.Position = UDim2.new(0, 75, 0.2, 0)
-DelayInput.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
-DelayInput.BorderColor3 = Color3.fromRGB(55, 50, 65)
+DelayInput.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+DelayInput.BorderColor3 = Color3.fromRGB(45, 45, 50)
 DelayInput.Text = "0.1"
-DelayInput.TextColor3 = Color3.fromRGB(0, 255, 170)
+DelayInput.TextColor3 = Color3.fromRGB(0, 255, 150)
 DelayInput.Font = Enum.Font.SourceSansBold
 DelayInput.TextSize = 13
 DelayInput.ClearTextOnFocus = false
@@ -139,8 +143,8 @@ DelayInput.Parent = ControlPanel
 local AutoShootBtn = Instance.new("TextButton")
 AutoShootBtn.Size = UDim2.new(0, 145, 0.7, 0)
 AutoShootBtn.Position = UDim2.new(1, -152, 0.15, 0)
-AutoShootBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-AutoShootBtn.BorderColor3 = Color3.fromRGB(55, 50, 65)
+AutoShootBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 24)
+AutoShootBtn.BorderColor3 = Color3.fromRGB(45, 45, 50)
 AutoShootBtn.Text = "AUTO SHOOT: OFF"
 AutoShootBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
 AutoShootBtn.Font = Enum.Font.SourceSansBold
@@ -151,19 +155,19 @@ local DynamicStatus = Instance.new("TextLabel")
 DynamicStatus.Size = UDim2.new(1, -14, 0, 25)
 DynamicStatus.Position = UDim2.new(0, 7, 0, 212)
 DynamicStatus.BackgroundTransparency = 1
-DynamicStatus.Text = "Scanning spell storage..."
-DynamicStatus.TextColor3 = Color3.fromRGB(150, 150, 155)
+DynamicStatus.Text = "Initializing storage validation link..."
+DynamicStatus.TextColor3 = Color3.fromRGB(140, 140, 145)
 DynamicStatus.Font = Enum.Font.SourceSansItalic
 DynamicStatus.TextSize = 12
 DynamicStatus.Parent = MainFrame
 
 ---------------------------------------------------------
--- 3. CARD RETRIEVAL AND POPULATION ENGINE
+-- 3. STORAGE LOADING ROUTINE
 ---------------------------------------------------------
 local ActiveCastManifest = {}
 local AutoShootActive = false
 
--- Targets the spell asset index folder exclusively
+-- Targets ReplicatedStorage configuration folder exclusively
 local CardsFolder = ReplicatedStorage:FindFirstChild("Cards")
 if CardsFolder then
     local items = CardsFolder:GetChildren()
@@ -172,10 +176,10 @@ if CardsFolder then
         
         local ItemBtn = Instance.new("TextButton")
         ItemBtn.Size = UDim2.new(1, -8, 0, 26)
-        ItemBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 33)
-        ItemBtn.BorderColor3 = Color3.fromRGB(40, 40, 45)
+        ItemBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 28)
+        ItemBtn.BorderColor3 = Color3.fromRGB(35, 35, 40)
         ItemBtn.Text = "  [ ] " .. card.Name
-        ItemBtn.TextColor3 = Color3.fromRGB(200, 200, 205)
+        ItemBtn.TextColor3 = Color3.fromRGB(190, 190, 195)
         ItemBtn.Font = Enum.Font.SourceSans
         ItemBtn.TextSize = 13
         ItemBtn.TextXAlignment = Enum.TextXAlignment.Left
@@ -183,41 +187,41 @@ if CardsFolder then
         
         ScrollList.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
         
-        -- Multi-selection tracking logic
+        -- Safe Selection Event Handler
         ItemBtn.MouseButton1Click:Connect(function()
             if ActiveCastManifest[card.Name] then
                 ActiveCastManifest[card.Name] = nil
-                ItemBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 33)
-                ItemBtn.TextColor3 = Color3.fromRGB(200, 200, 205)
+                ItemBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 28)
+                ItemBtn.TextColor3 = Color3.fromRGB(190, 190, 195)
                 ItemBtn.Text = "  [ ] " .. card.Name
             else
                 ActiveCastManifest[card.Name] = true
-                ItemBtn.BackgroundColor3 = Color3.fromRGB(50, 35, 70)
-                ItemBtn.TextColor3 = Color3.fromRGB(210, 160, 255)
+                ItemBtn.BackgroundColor3 = Color3.fromRGB(35, 50, 45)
+                ItemBtn.TextColor3 = Color3.fromRGB(150, 255, 200)
                 ItemBtn.Text = "  [*] " .. card.Name
             end
         end)
     end
-    DynamicStatus.Text = "Spell system initialized. Select targets."
+    DynamicStatus.Text = "Ready. Select spells from storage."
 else
-    DynamicStatus.Text = "Error: ReplicatedStorage.Cards not found."
+    DynamicStatus.Text = "Error: ReplicatedStorage.Cards folder missing."
 end
 
 -- Toggle Switch Engine
 AutoShootBtn.MouseButton1Click:Connect(function()
     AutoShootActive = not AutoShootActive
     AutoShootBtn.Text = AutoShootActive and "AUTO SHOOT: ON" or "AUTO SHOOT: OFF"
-    AutoShootBtn.BackgroundColor3 = AutoShootActive and Color3.fromRGB(110, 35, 45) or Color3.fromRGB(20, 20, 25)
+    AutoShootBtn.BackgroundColor3 = AutoShootActive and Color3.fromRGB(35, 80, 50) or Color3.fromRGB(22, 22, 24)
 end)
 
 ---------------------------------------------------------
--- 4. PIPELINE SCHEDULER
+-- 4. PURE BACKGROUND EXECUTION LOOP
 ---------------------------------------------------------
 local UseSpellRemote = ReplicatedStorage:FindFirstChild("UseSpell")
 
 task.spawn(function()
     while true do
-        task.wait() -- Baseline protection link
+        task.wait() -- Baseline process constraint safety link
         
         if AutoShootActive and UseSpellRemote then
             local speedSetting = tonumber(DelayInput.Text)
@@ -226,17 +230,17 @@ task.spawn(function()
             local currentFired = 0
             for spellName, _ in pairs(ActiveCastManifest) do
                 pcall(function()
-                    -- Fires exclusively to the UseSpell endpoint
+                    -- Straight network invocation without environment hooks
                     UseSpellRemote:FireServer(spellName)
                 end)
                 currentFired = currentFired + 1
             end
             
             if currentFired > 0 then
-                DynamicStatus.Text = "Casting " .. tostring(currentFired) .. " spells at " .. tostring(currentDelay) .. "s intervals."
+                DynamicStatus.Text = "Casting " .. tostring(currentFired) .. " spells at " .. tostring(currentDelay) .. "s delay."
                 task.wait(currentDelay)
             else
-                DynamicStatus.Text = "Auto-shoot is running but no spells are selected!"
+                DynamicStatus.Text = "Auto-shoot active. No spells checked."
             end
         elseif not AutoShootActive then
             DynamicStatus.Text = "System Standby."
