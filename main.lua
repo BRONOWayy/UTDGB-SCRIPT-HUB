@@ -9,34 +9,31 @@ local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 
 -- Build Tracking Manifest
-local SCRIPT_VERSION = "1.0.1"
+local SCRIPT_VERSION = "1.0.2"
 
 ---------------------------------------------------------
--- 1. REMOTE EVENT NETWORK SCANNER
+-- 1. STAGE PROTECTION HOOK
 ---------------------------------------------------------
-local AttackRemote = nil
+local SafeColor = Instance.new("Color3Value")
+SafeColor.Name = "NameColors"
+SafeColor.Value = Color3.fromRGB(255, 255, 255)
 
-local function scanForAttackRemotes()
-    local targets = {"LeftClick", "Attack", "Action", "Hit", "Swing", "Use"}
-    local descendants = game:GetDescendants()
-    
-    for i = 1, #descendants do
-        local obj = descendants[i]
-        if obj:IsA("RemoteEvent") then
-            for _, name in ipairs(targets) do
-                if string.find(string.lower(obj.Name), string.lower(name)) then
-                    AttackRemote = obj
-                    return
-                end
-            end
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", function(self, key)
+    if tostring(key) == "NameColors" and self:IsA("Player") then
+        local success, realChild = pcall(function() 
+            return oldIndex(game, "FindFirstChild")(self, "NameColors") 
+        end)
+        if success and realChild then 
+            return realChild 
         end
+        return SafeColor
     end
-end
-
-scanForAttackRemotes()
+    return oldIndex(self, key)
+end)
 
 ---------------------------------------------------------
--- 2. INTERFACE CONSTRUCTOR (Versioned Theme)
+-- 2. INTERFACE CONSTRUCTOR
 ---------------------------------------------------------
 if CoreGui:FindFirstChild("DeltaWeaponFirePanel") then
     CoreGui.DeltaWeaponFirePanel:Destroy()
@@ -69,14 +66,13 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -60, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Network Weapon Trigger"
+Title.Text = "Animation & Cooldown Override"
 Title.TextColor3 = Color3.fromRGB(240, 240, 240)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MovingThing
 
--- Formal Build Version Identifier Label
 local VerLabel = Instance.new("TextLabel")
 VerLabel.Size = UDim2.new(0, 50, 1, 0)
 VerLabel.Position = UDim2.new(1, -55, 0, 0)
@@ -88,18 +84,15 @@ VerLabel.TextSize = 12
 VerLabel.TextXAlignment = Enum.TextXAlignment.Right
 VerLabel.Parent = MovingThing
 
--- Drag Handler
+-- Simple Drag Block
 local dragging, dragInput, dragStart, startPos
 MovingThing.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = MainFrame.Position
-        
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
         end)
     end
 end)
@@ -117,7 +110,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle Button
+-- Controls Container
 local ModeFrame = Instance.new("Frame")
 ModeFrame.Size = UDim2.new(1, -14, 0, 35)
 ModeFrame.Position = UDim2.new(0, 7, 0, 40)
@@ -129,7 +122,7 @@ local ModeLabel = Instance.new("TextLabel")
 ModeLabel.Size = UDim2.new(0.6, 0, 1, 0)
 ModeLabel.Position = UDim2.new(0, 8, 0, 0)
 ModeLabel.BackgroundTransparency = 1
-ModeLabel.Text = "Auto-Attack (Spam M1):"
+ModeLabel.Text = "Hacked Swift Swing Loop:"
 ModeLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 ModeLabel.Font = Enum.Font.SourceSans
 ModeLabel.TextSize = 13
@@ -147,24 +140,18 @@ ToggleBtn.Font = Enum.Font.SourceSansBold
 ToggleBtn.TextSize = 13
 ToggleBtn.Parent = ModeFrame
 
-local TrackingActive = false
+local FastSwingActive = false
 ToggleBtn.MouseButton1Click:Connect(function()
-    TrackingActive = not TrackingActive
-    if TrackingActive then
-        ToggleBtn.Text = "ON"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    else
-        ToggleBtn.Text = "OFF"
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    end
+    FastSwingActive = not FastSwingActive
+    ToggleBtn.Text = FastSwingActive and "ON" or "OFF"
+    ToggleBtn.BackgroundColor3 = FastSwingActive and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(25, 25, 25)
 end)
 
--- Status Feedback Display Label
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -14, 0, 25)
 StatusLabel.Position = UDim2.new(0, 7, 0, 85)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: Idle (System Armed)"
+StatusLabel.Text = "Status: Monitoring local tool instance structures..."
 StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
 StatusLabel.Font = Enum.Font.SourceSansItalic
 StatusLabel.TextSize = 12
@@ -172,37 +159,45 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
 StatusLabel.Parent = MainFrame
 
 ---------------------------------------------------------
--- 3. INTERCEPTION AND PIPELINE FORCING
+-- 3. ANIMATION AND DELAY CANCELLATION PIPELINE
 ---------------------------------------------------------
 RunService.Heartbeat:Connect(function()
-    if not TrackingActive then return end
-    
     local character = Player.Character
-    if character then
-        local activeTool = character:FindFirstChildOfClass("Tool")
+    if not character then return end
+    
+    local activeTool = character:FindFirstChildOfClass("Tool")
+    if not activeTool then 
+        StatusLabel.Text = "Ready. Hold your weapon to process."
+        return 
+    end
+    
+    -- Fast step 1: Force the configuration variable down to absolute zero
+    local cd = activeTool:FindFirstChild("Cooldown", true)
+    if cd and cd:IsA("ValueBase") then
+        cd.Value = 0
+    end
+    
+    if not FastSwingActive then 
+        StatusLabel.Text = "Monitoring weapon values safely..."
+        return 
+    end
+    
+    -- Fast step 2: Intercept the playing attack track and freeze animation delay time
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
+        local playingTracks = animator:GetPlayingAnimationTracks()
         
-        if activeTool then
-            if activeTool:FindFirstChild("RemoteEvent") then
-                activeTool.RemoteEvent:FireServer()
-                StatusLabel.Text = "Fired Tool Internal RemoteEvent..."
-            elseif activeTool:FindFirstChild("Activated") then
-                activeTool:Activate()
-                StatusLabel.Text = "Invoked activation signal hook"
-            else
-                if not AttackRemote then
-                    scanForAttackRemotes()
-                end
-                
-                if AttackRemote then
-                    AttackRemote:FireServer(activeTool.Name)
-                    StatusLabel.Text = "Routed signal through global network..."
-                else
-                    activeTool:Activate()
-                    StatusLabel.Text = "Simulating click inputs..."
-                end
+        for i = 1, #playingTracks do
+            local track = playingTracks[i]
+            -- If it's playing an attack animation, speed it up massively to force Loaded.Length to 0
+            if track.Name ~= "Hold" and track.Name ~= "Idle" then
+                track:AdjustSpeed(100) -- Force animation to complete instantly
             end
-        else
-            StatusLabel.Text = "Hold a weapon in your hand to begin."
         end
     end
+    
+    -- Fast step 3: Directly execute Activation triggers
+    activeTool:Activate()
+    StatusLabel.Text = "Bypassing animation timers on: " .. activeTool.Name
 end)
