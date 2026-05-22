@@ -1,76 +1,172 @@
--- Modern UI Library for Delta Executor
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+if not game:IsLoaded() then 
+    game.Loaded:Wait() 
+end
 
-local Window = Fluent:CreateWindow({
-    Title = "Item Master | Step 1",
-    SubTitle = "Delta Engine",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(450, 300),
-    Acrylic = true,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
-})
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Player = Players.LocalPlayer
 
-local Tabs = {
-    Items = Window:AddTab({ Title = "Item Spawner", Icon = "rbxassetid://4483345906" })
-}
+---------------------------------------------------------
+-- 1. BACKGROUND ENVIRONMENT PROTECTION HOOK
+---------------------------------------------------------
+local SafeColor = Instance.new("Color3Value")
+SafeColor.Name = "NameColors"
+SafeColor.Value = Color3.fromRGB(255, 255, 255)
 
-local Player = game.Players.LocalPlayer
-local PlayerItemsFolder = Player:WaitForChild("Items", 10)
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-Tabs.Items:AddButton({
-    Title = "Give All Real Items & Tickets",
-    Description = "Safely fills your slots and hooks server functions",
-    Callback = function()
-        local ItemsStorage = ReplicatedStorage:FindFirstChild("Items")
-        
-        if not ItemsStorage then
-            Fluent:Notify({ Title = "Error", Content = "Missing master 'Items' folder in ReplicatedStorage!", Duration = 3 })
-            return
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", function(self, key)
+    if tostring(key) == "NameColors" and self:IsA("Player") then
+        local success, realChild = pcall(function() 
+            return oldIndex(game, "FindFirstChild")(self, "NameColors") 
+        end)
+        if success and realChild then 
+            return realChild 
         end
-
-        local count = 0
-
-        -- 1. CLEAN UP THE CRASHING FOLDER INSIDE YOUR INVENTORY FIRST
-        -- If 'KeyItem' exists as a raw folder, we delete it so line 55 of HandleItems doesn't break
-        if PlayerItemsFolder then
-            local brokenKeyItem = PlayerItemsFolder:FindFirstChild("KeyItem")
-            if brokenKeyItem and brokenKeyItem:IsA("Folder") then
-                brokenKeyItem:Destroy()
-            end
-        end
-
-        -- 2. SPAWN EVERY ITEM MATCHING THE EXACT VALUES THE GAME LOGIC EXPECTS
-        for _, itemTemplate in pairs(ItemsStorage:GetChildren()) do
-            local itemName = itemTemplate.Name
-
-            if PlayerItemsFolder then
-                local existing = PlayerItemsFolder:FindFirstChild(itemName)
-                
-                if not existing then
-                    -- Create an IntValue so OwnWeapon.Value works perfectly on line 55!
-                    local itemValue = Instance.new("IntValue")
-                    itemValue.Name = itemName
-                    itemValue.Value = 5 -- Give yourself 5 copies of everything (Tickets, Potions, Boosters)
-                    itemValue.Parent = PlayerItemsFolder
-                    count = count + 1
-                else
-                    -- If it's already there, just replenish the count
-                    if existing:IsA("ValueBase") then
-                        existing.Value = 5
-                    end
-                end
-            end
-        end
-
-        Fluent:Notify({
-            Title = "Success",
-            Content = "Loaded " .. count .. " items! Check your inventory menu now.",
-            Duration = 4
-        })
+        return SafeColor
     end
-})
+    return oldIndex(self, key)
+end)
 
-Window:SelectTab(Tabs.Items)
+---------------------------------------------------------
+-- 2. INTERFACE CONSTRUCTOR (Plain Theme)
+---------------------------------------------------------
+if CoreGui:FindFirstChild("DeltaM1CooldownPanel") then
+    CoreGui.DeltaM1CooldownPanel:Destroy()
+end
 
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "DeltaM1CooldownPanel"
+ScreenGui.ResetOnSpawn = false
+
+local attached, _ = pcall(function() ScreenGui.Parent = CoreGui end)
+if not attached then ScreenGui.Parent = Player:WaitForChild("PlayerGui") end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 270, 0, 110)
+MainFrame.Position = UDim2.new(0.15, 0, 0.25, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+MainFrame.BorderSizePixel = 1
+MainFrame.BorderColor3 = Color3.fromRGB(60, 60, 60)
+MainFrame.Active = true
+MainFrame.Parent = ScreenGui
+
+local MovingThing = Instance.new("Frame")
+MovingThing.Size = UDim2.new(1, 0, 0, 30)
+MovingThing.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+MovingThing.BorderSizePixel = 1
+MovingThing.BorderColor3 = Color3.fromRGB(60, 60, 60)
+MovingThing.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -10, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Equipped M1 Cooldown Modifier"
+Title.TextColor3 = Color3.fromRGB(240, 240, 240)
+Title.Font = Enum.Font.SourceSans
+Title.TextSize = 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MovingThing
+
+-- Simple Drag Handler Block
+local dragging, dragInput, dragStart, startPos
+MovingThing.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MovingThing.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Live Cooldown Text Input Box
+local ConfigHeaderBox = Instance.new("Frame")
+ConfigHeaderBox.Size = UDim2.new(1, -14, 0, 35)
+ConfigHeaderBox.Position = UDim2.new(0, 7, 0, 37)
+ConfigHeaderBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ConfigHeaderBox.BorderColor3 = Color3.fromRGB(55, 55, 55)
+ConfigHeaderBox.Parent = MainFrame
+
+local ConfigLabel = Instance.new("TextLabel")
+ConfigLabel.Size = UDim2.new(0.6, 0, 1, 0)
+ConfigLabel.Position = UDim2.new(0, 8, 0, 0)
+ConfigLabel.BackgroundTransparency = 1
+ConfigLabel.Text = "M1 Cooldown Value:"
+ConfigLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+ConfigLabel.Font = Enum.Font.SourceSans
+ConfigLabel.TextSize = 13
+ConfigLabel.TextXAlignment = Enum.TextXAlignment.Left
+ConfigLabel.Parent = ConfigHeaderBox
+
+local CooldownValueInput = Instance.new("TextBox")
+CooldownValueInput.Size = UDim2.new(0.35, 0, 0.7, 0)
+CooldownValueInput.Position = UDim2.new(0.62, 0, 0.15, 0)
+CooldownValueInput.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+CooldownValueInput.BorderColor3 = Color3.fromRGB(60, 60, 60)
+CooldownValueInput.Text = "0"
+CooldownValueInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+CooldownValueInput.Font = Enum.Font.SourceSansBold
+CooldownValueInput.TextSize = 13
+CooldownValueInput.ClearTextOnFocus = false
+CooldownValueInput.Parent = ConfigHeaderBox
+
+-- Current Target Visual Feedback Label
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -14, 0, 25)
+StatusLabel.Position = UDim2.new(0, 7, 0, 77)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Status: Waiting for equipped weapon..."
+StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+StatusLabel.Font = Enum.Font.SourceSansItalic
+StatusLabel.TextSize = 12
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
+StatusLabel.Parent = MainFrame
+
+---------------------------------------------------------
+-- 3. LIVE CHARACTER BACKPACK & WEAPON INTERCEPTOR LOOP
+---------------------------------------------------------
+RunService.Heartbeat:Connect(function()
+    local targetNumber = tonumber(CooldownValueInput.Text) or 0
+    local character = Player.Character
+    
+    if character then
+        local activeTool = character:FindFirstChildOfClass("Tool")
+        
+        if activeTool then
+            local toolConfig = activeTool:FindFirstChild("Tool")
+            if toolConfig then
+                local cdObj = toolConfig:FindFirstChild("Cooldown")
+                if cdObj and cdObj:IsA("ValueBase") then
+                    cdObj.Value = targetNumber
+                    StatusLabel.Text = "Modifying: " .. activeTool.Name .. " (" .. tostring(targetNumber) .. "s)"
+                else
+                    StatusLabel.Text = "Found " .. activeTool.Name .. " but 'Cooldown' object is missing"
+                end
+            else
+                StatusLabel.Text = "Holding: " .. activeTool.Name .. " (Missing inner 'Tool' folder)"
+            end
+        else
+            StatusLabel.Text = "Status: No weapon equipped in your hand."
+        end
+    end
+end)
