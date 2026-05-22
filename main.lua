@@ -32,12 +32,12 @@ end)
 ---------------------------------------------------------
 -- 2. INTERFACE CONSTRUCTOR (Plain Theme)
 ---------------------------------------------------------
-if CoreGui:FindFirstChild("DeltaNumberValuePanel") then
-    CoreGui.DeltaNumberValuePanel:Destroy()
+if CoreGui:FindFirstChild("DeltaLagFreePanel") then
+    CoreGui.DeltaLagFreePanel:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "DeltaNumberValuePanel"
+ScreenGui.Name = "DeltaLagFreePanel"
 ScreenGui.ResetOnSpawn = false
 
 local attached, _ = pcall(function() ScreenGui.Parent = CoreGui end)
@@ -63,14 +63,14 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -10, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Universal NumberValue Overrider"
+Title.Text = "Lag-Free Cooldown Overrider"
 Title.TextColor3 = Color3.fromRGB(240, 240, 240)
 Title.Font = Enum.Font.SourceSans
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MovingThing
 
--- Simple Drag Handler Block
+-- Drag Handling Block
 local dragging, dragInput, dragStart, startPos
 MovingThing.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -99,7 +99,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Live Cooldown Text Input Box
+-- Cooldown Text Input Box
 local ConfigHeaderBox = Instance.new("Frame")
 ConfigHeaderBox.Size = UDim2.new(1, -14, 0, 35)
 ConfigHeaderBox.Position = UDim2.new(0, 7, 0, 37)
@@ -130,44 +130,12 @@ CooldownValueInput.TextSize = 13
 CooldownValueInput.ClearTextOnFocus = false
 CooldownValueInput.Parent = ConfigHeaderBox
 
--- Current Status Feedback Label
+-- Status Feedback Label
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, -14, 0, 25)
 StatusLabel.Position = UDim2.new(0, 7, 0, 77)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Scanning active instances..."
+StatusLabel.Text = "FPS Optimized. Monitoring cached values..."
 StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
 StatusLabel.Font = Enum.Font.SourceSansItalic
-StatusLabel.TextSize = 12
-StatusLabel.TextXAlignment = Enum.TextXAlignment.Center
-StatusLabel.Parent = MainFrame
-
----------------------------------------------------------
--- 3. GLOBAL OBJECT TREE LOOKUP LOOP
----------------------------------------------------------
-RunService.Heartbeat:Connect(function()
-    local targetValue = tonumber(CooldownValueInput.Text) or 0.01
-    local adjustedCount = 0
-    
-    -- Fetch all runtime objects across the complete workspace and storage contexts
-    local objects = game:GetDescendants()
-    
-    for i = 1, #objects do
-        local obj = objects[i]
-        
-        -- Explicitly evaluate name and class definitions to find core variables
-        if obj:IsA("NumberValue") or obj:IsA("DoubleConstrainedValue") then
-            local stringName = string.lower(obj.Name)
-            if stringName == "cooldown" or stringName == "cd" then
-                obj.Value = targetValue
-                adjustedCount = adjustedCount + 1
-            end
-        end
-    end
-    
-    if adjustedCount > 0 then
-        StatusLabel.Text = "Locked " .. tostring(adjustedCount) .. " 'Cooldown' NumberValues to " .. tostring(targetValue)
-    else
-        StatusLabel.Text = "Searching for active Cooldown NumberValues..."
-    end
-end)
+Status
